@@ -1,0 +1,29 @@
+# Dockerfile.base
+# This image performs the heavy lifting (>10 hours build time)
+# so GitHub Actions doesn't have to do it on every run.
+
+# 1. Start with a Conda-ready base image
+FROM continuumio/miniconda3
+
+# 2. Set the working directory inside the container
+WORKDIR /app
+
+# 3. Install basic system utilities that setup.sh might need
+# (git, curl, build tools are common requirements for bioinformatics scripts)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    curl \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# 4. Copy the setup scripts from the biomni_env folder
+# We copy them to the root of WORKDIR (.)
+COPY biomni_env/setup.sh .
+COPY biomni_env/environment.yml .
+COPY biomni_env/new_software_v005.sh .
+
+# 5. Run the heavy setup script
+# NOTE: Since setup.sh asks for user prompts, we pipe "yes" to it
+# to automatically accept defaults and prevent the build from hanging.
+RUN yes | bash setup.sh
