@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y \
 # We copy them to the root of WORKDIR (.)
 COPY biomni_env/setup.sh .
 COPY biomni_env/environment.yml .
-COPY biomni_env/new_software_v005.sh .
+COPY biomni_env/new_software_v006.sh .
 
 # 5. Run the heavy setup script
 # NOTE: Since setup.sh asks for user prompts, we pipe "yes" to it
