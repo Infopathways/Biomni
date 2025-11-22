@@ -1,24 +1,23 @@
 # Dockerfile.base
-# This image performs the heavy lifting (>10 hours build time)
-# so GitHub Actions doesn't have to do it on every run.
+# 1. Start with the compatible Ubuntu 22.04 base image
+FROM ubuntu:22.04
 
-# 1. Start with a Conda-ready base image
-FROM continuumio/miniconda3
+# 1b. Install Miniconda (Required for subsequent Conda commands)
+ENV PATH="/opt/conda/bin:${PATH}"
+RUN apt-get update && \
+    apt-get install -y wget && \
+    wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
+    /bin/bash /tmp/miniconda.sh -b -p /opt/conda && \
+    rm /tmp/miniconda.sh && \
+    # Now install system utilities
+    apt-get install -y build-essential git curl wget && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # 2. Set the working directory inside the container
 WORKDIR /app
 
-# 3. Install basic system utilities that setup.sh might need
-# (git, curl, build tools are common requirements for bioinformatics scripts)
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    git \
-    curl \
-    wget \
-    && rm -rf /var/lib/apt/lists/*
-
-# 4. Copy the setup scripts from the biomni_env folder
-# We copy them to the root of WORKDIR (.)
+# 3. Copy all necessary setup scripts and configuration files
 COPY biomni_env/setup.sh .
 COPY biomni_env/environment.yml .
 COPY biomni_env/bio_env.yml .
@@ -27,7 +26,5 @@ COPY biomni_env/install_r_packages.R .
 COPY biomni_env/install_cli_tools.sh .
 COPY biomni_env/new_software_v006.sh .
 
-# 5. Run the heavy setup script
-# NOTE: Since setup.sh asks for user prompts, we pipe "yes" to it
-# to automatically accept defaults and prevent the build from hanging.
+# 4. Run the heavy setup script (Note: This is the 10-hour step)
 RUN yes | bash setup.sh
