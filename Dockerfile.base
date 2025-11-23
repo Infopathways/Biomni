@@ -1,16 +1,18 @@
 # Dockerfile.base
-
-# 1. Start with the compatible Ubuntu 22.04 base image
+# 1. Start with the Ubuntu 22.04 base image
 FROM ubuntu:22.04
 
-# 1b. Install System Utilities (Must run before Miniconda download)
-# Install basic utilities needed for the subsequent steps (wget, build tools)
+# 1b. Install System Utilities & Miniconda Prerequisites
+# Added 'sudo' because setup.sh might try to use it
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    apt-get install -y --no-install-recommends \
     wget \
     curl \
     git \
     build-essential \
+    sudo \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # 1c. Install Miniconda (Dedicated Layer)
@@ -21,11 +23,10 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
     /bin/bash /tmp/miniconda.sh -b -p $CONDA_DIR && \
     rm /tmp/miniconda.sh
 
-# 2. Set the working directory inside the container
+# 2. Set the working directory
 WORKDIR /app
 
-# 3. Copy all necessary setup scripts and configuration files
-# These paths MUST be correct relative to the Docker context
+# 3. Copy setup scripts
 COPY biomni_env/setup.sh .
 COPY biomni_env/environment.yml .
 COPY biomni_env/bio_env.yml .
@@ -34,7 +35,15 @@ COPY biomni_env/install_r_packages.R .
 COPY biomni_env/install_cli_tools.sh .
 COPY biomni_env/new_software_v006.sh .
 
-# 4. Initialize Conda (Crucial for Conda commands to work inside bash)
-# Then run the heavy setup script (Note: This is the 10-hour step)
-RUN conda init bash && \
-    /bin/bash -c "source ~/.bashrc && yes | bash setup.sh"
+# 4. CRITICAL FIX: Initialize Conda and Enforce Shell Loading
+# 'conda init' sets up .bashrc
+# BASH_ENV tells non-interactive scripts (like setup.sh) to read .bashrc
+# SHELL sets the default shell to bash for all RUN commands
+RUN conda init bash
+
+ENV BASH_ENV=/root/.bashrc
+SHELL ["/bin/bash", "-c"]
+
+# 5. Run the heavy setup script
+# The BASH_ENV variable ensures 'conda activate' works inside this script
+RUN yes | bash setup.sh
