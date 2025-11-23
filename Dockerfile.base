@@ -1,23 +1,31 @@
 # Dockerfile.base
+
 # 1. Start with the compatible Ubuntu 22.04 base image
 FROM ubuntu:22.04
 
-# 1b. Install Miniconda (Required for subsequent Conda commands)
-ENV PATH="/opt/conda/bin:${PATH}"
+# 1b. Install System Utilities (Must run before Miniconda download)
+# Install basic utilities needed for the subsequent steps (wget, build tools)
 RUN apt-get update && \
-    apt-get install -y wget && \
-    wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
-    /bin/bash /tmp/miniconda.sh -b -p /opt/conda && \
-    rm /tmp/miniconda.sh && \
-    # Now install system utilities
-    apt-get install -y build-essential git curl wget && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    wget \
+    curl \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# 1c. Install Miniconda (Dedicated Layer)
+ENV CONDA_DIR /opt/conda
+ENV PATH=$CONDA_DIR/bin:$PATH
+
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
+    /bin/bash /tmp/miniconda.sh -b -p $CONDA_DIR && \
+    rm /tmp/miniconda.sh
 
 # 2. Set the working directory inside the container
 WORKDIR /app
 
 # 3. Copy all necessary setup scripts and configuration files
+# These paths MUST be correct relative to the Docker context
 COPY biomni_env/setup.sh .
 COPY biomni_env/environment.yml .
 COPY biomni_env/bio_env.yml .
@@ -26,5 +34,7 @@ COPY biomni_env/install_r_packages.R .
 COPY biomni_env/install_cli_tools.sh .
 COPY biomni_env/new_software_v006.sh .
 
-# 4. Run the heavy setup script (Note: This is the 10-hour step)
-RUN yes | bash setup.sh
+# 4. Initialize Conda (Crucial for Conda commands to work inside bash)
+# Then run the heavy setup script (Note: This is the 10-hour step)
+RUN conda init bash && \
+    /bin/bash -c "source ~/.bashrc && yes | bash setup.sh"
