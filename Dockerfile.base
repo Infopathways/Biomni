@@ -1,23 +1,15 @@
-# Dockerfile.base
-FROM ubuntu:22.04
+# Dockerfile.base 
+FROM continuumio/miniconda3
 
-# 1. Install System Utilities & Prerequisites
+# 1. Install System Utilities (Minimal, as Conda handles most dependencies)
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    wget curl git build-essential sudo ca-certificates dos2unix \
+    wget curl git build-essential sudo dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Install Miniconda
-ENV CONDA_DIR /opt/conda
-ENV PATH=$CONDA_DIR/bin:$PATH
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
-    /bin/bash /tmp/miniconda.sh -b -p $CONDA_DIR && \
-    rm /tmp/miniconda.sh
-
-# 3. Set workdir and Copy scripts
+# 2. Set workdir and Copy necessary files
 WORKDIR /app
-COPY biomni_env/setup.sh .
 COPY biomni_env/environment.yml .
 COPY biomni_env/bio_env.yml .
 COPY biomni_env/r_packages.yml .
@@ -25,18 +17,15 @@ COPY biomni_env/install_r_packages.R .
 COPY biomni_env/install_cli_tools.sh .
 COPY biomni_env/new_software_v006.sh .
 
-# 4. CRITICAL FIX: Explicitly create the 'biomni_e1' environment first.
-# The original setup.sh likely uses 'conda env create -f environment.yml',
-# but running it alone often causes activation errors later. We run it here first
-# to ensure the environment is ready.
-
+# 3. CRITICAL FIX: Create the base environment explicitly
+# The environment name 'biomni_e1' is assumed to be defined in environment.yml.
 RUN conda env create -f environment.yml --name biomni_e1
 
-# 5. FIX: Run the rest of the heavy setup script *inside* the environment
-# The 'conda activate' command often fails in the Docker build shell. 
-# The best practice is to use 'conda run' or force the shell activation.
+# 4. CRITICAL FIX: Directly pipe the entire contents of setup.sh into a bash shell
+# This is the most stable way to run the script without relying on fragile file
+# permissions or activation logic inside the original script.
+COPY biomni_env/setup.sh .
 
 RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
     conda activate biomni_e1 && \
-    # Now that the environment is active, run the rest of the heavy setup.
     yes | bash setup.sh"
