@@ -1,50 +1,27 @@
-# Start with a standard Ubuntu image for full control
-FROM ubuntu:22.04
+# Dockerfile.base 
+# Use the stable Miniconda image provided by Continuum Analytics
+FROM continuumio/miniconda3
 
-# Install essential system-level dependencies. This layer gets cached.
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    build-essential curl wget git ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+# 1. Install Crucial System Utilities (Essential for compilers and headers)
+# We use 'bash -c' to ensure all commands run in one stable shell instance.
+RUN /bin/bash -c "conda install -y -c conda-forge build-essential dos2unix && \
+    conda clean --all -f -y"
 
-# Install Miniconda. This layer also gets cached.
-ENV CONDA_DIR /opt/conda
-ENV PATH=$CONDA_DIR/bin:$PATH
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
-    /bin/bash /tmp/miniconda.sh -b -p $CONDA_DIR && \
-    rm /tmp/miniconda.sh && \
-    conda clean -afy
-
-# === NEW STEP: Configure Conda and Accept Terms of Service ===
-# This is CRITICAL for non-interactive builds like Docker.
-# It pre-accepts the Anaconda ToS so the build doesn't halt.
-RUN conda config --set always_yes yes && \
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-
-# Set the working directory
+# 2. Set workdir and Copy scripts
 WORKDIR /app
-
-# === LAYER 1: Create the base environment ===
-# Copy ONLY the primary environment file first.
+# Copy only the files strictly needed for the setup script
+COPY biomni_env/setup.sh .
 COPY biomni_env/environment.yml .
-
-# Create the initial environment. This step will be cached.
-RUN conda env create -f environment.yml --name biomni_e1 --verbose
-
-# === LAYER 2: Update the environment with bioinformatics tools ===
-# Now, copy the second environment file.
 COPY biomni_env/bio_env.yml .
+COPY biomni_env/r_packages.yml .
+COPY biomni_env/install_r_packages.R .
+COPY biomni_env/install_cli_tools.sh .
+COPY biomni_env/new_software_v006.sh .
+COPY biomni_env/setup_path.sh .
 
-# Use 'conda env update' to ADD the new packages to the EXISTING environment.
-RUN conda env update --name biomni_e1 --file bio_env.yml --prune --verbose
-
-# Activate the 'biomni_e1' environment for all subsequent commands.
-SHELL ["conda", "run", "-n", "biomni_e1", "/bin/bash", "-c"]
-
-# Now that the full environment is built, copy the rest of your application code.
-COPY . .
-
-# Set a default command to run when the container starts (optional)
-# Example: CMD ["gradio", "app.py"]
+# 3. Execution Fix: Run the entire setup script inside the base environment.
+# Note: The 'setup.sh' script's logic must create the 'biomni_e1' environment
+# and handle the package installation/activation within its own logic.
+# We ensure line endings are clean before execution.
+RUN dos2unix setup.sh && \
+    yes | bash setup.sh
