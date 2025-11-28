@@ -1,31 +1,46 @@
-# Dockerfile.base 
-FROM continuumio/miniconda3
+# Start with a standard Ubuntu image for full control
+FROM ubuntu:22.04
 
-# 1. Install System Utilities (Minimal, as Conda handles most dependencies)
+# Install essential system-level dependencies. This layer gets cached.
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    wget curl git build-essential sudo dos2unix \
+    build-essential curl wget git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Set workdir and Copy necessary files
+# Install Miniconda. This layer also gets cached.
+ENV CONDA_DIR /opt/conda
+ENV PATH=$CONDA_DIR/bin:$PATH
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
+    /bin/bash /tmp/miniconda.sh -b -p $CONDA_DIR && \
+    rm /tmp/miniconda.sh && \
+    conda clean -afy
+
+# Set the working directory
 WORKDIR /app
+
+# === LAYER 1: Create the base environment ===
+# Copy ONLY the primary environment file first.
 COPY biomni_env/environment.yml .
+
+# Create the initial environment. This step will be cached.
+# If only bio_env.yml changes, this layer will NOT re-run.
+RUN conda env create -f environment.yml --name biomni_e1 --verbose
+
+# === LAYER 2: Update the environment with bioinformatics tools ===
+# Now, copy the second environment file.
 COPY biomni_env/bio_env.yml .
-COPY biomni_env/r_packages.yml .
-COPY biomni_env/install_r_packages.R .
-COPY biomni_env/install_cli_tools.sh .
-COPY biomni_env/new_software_v006.sh .
 
-# 3. CRITICAL FIX: Create the base environment explicitly
-# The environment name 'biomni_e1' is assumed to be defined in environment.yml.
-RUN conda env create -f environment.yml --name biomni_e1
+# Use 'conda env update' to ADD the new packages to the EXISTING environment.
+# This is the key step. This layer will also be cached.
+RUN conda env update --name biomni_e1 --file bio_env.yml --prune --verbose
 
-# 4. CRITICAL FIX: Directly pipe the entire contents of setup.sh into a bash shell
-# This is the most stable way to run the script without relying on fragile file
-# permissions or activation logic inside the original script.
-COPY biomni_env/setup.sh .
+# Activate the 'biomni_e1' environment for all subsequent commands.
+SHELL ["conda", "run", "-n", "biomni_e1", "/bin/bash", "-c"]
 
-RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-    conda activate biomni_e1 && \
-    yes | bash setup.sh"
+# Now that the full environment is built, copy the rest of your application code.
+# We are NOT using setup.sh anymore because its job is done by the YML files.
+COPY . .
+
+# Set a default command to run when the container starts (optional)
+# Example: CMD ["gradio", "app.py"]
