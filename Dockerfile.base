@@ -16,6 +16,13 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
     rm /tmp/miniconda.sh && \
     conda clean -afy
 
+# === NEW STEP: Configure Conda and Accept Terms of Service ===
+# This is CRITICAL for non-interactive builds like Docker.
+# It pre-accepts the Anaconda ToS so the build doesn't halt.
+RUN conda config --set always_yes yes && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
 # Set the working directory
 WORKDIR /app
 
@@ -24,7 +31,6 @@ WORKDIR /app
 COPY biomni_env/environment.yml .
 
 # Create the initial environment. This step will be cached.
-# If only bio_env.yml changes, this layer will NOT re-run.
 RUN conda env create -f environment.yml --name biomni_e1 --verbose
 
 # === LAYER 2: Update the environment with bioinformatics tools ===
@@ -32,14 +38,12 @@ RUN conda env create -f environment.yml --name biomni_e1 --verbose
 COPY biomni_env/bio_env.yml .
 
 # Use 'conda env update' to ADD the new packages to the EXISTING environment.
-# This is the key step. This layer will also be cached.
 RUN conda env update --name biomni_e1 --file bio_env.yml --prune --verbose
 
 # Activate the 'biomni_e1' environment for all subsequent commands.
 SHELL ["conda", "run", "-n", "biomni_e1", "/bin/bash", "-c"]
 
 # Now that the full environment is built, copy the rest of your application code.
-# We are NOT using setup.sh anymore because its job is done by the YML files.
 COPY . .
 
 # Set a default command to run when the container starts (optional)
