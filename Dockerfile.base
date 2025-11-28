@@ -1,27 +1,31 @@
-# Dockerfile.base 
-# Use the stable Miniconda image provided by Continuum Analytics
+# Dockerfile.base - FINAL, FINAL, FINAL VERSION
+# This version removes the missing file and uses the simplest execution method.
+
 FROM continuumio/miniconda3
 
-# 1. Install Crucial System Utilities (Essential for compilers and headers)
-# We use 'bash -c' to ensure all commands run in one stable shell instance.
-RUN /bin/bash -c "conda install -y -c conda-forge build-essential dos2unix && \
-    conda clean --all -f -y"
+# 1. Install System Utilities & Fix Line Endings
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential dos2unix && \
+    conda clean --all -f -y
 
 # 2. Set workdir and Copy scripts
 WORKDIR /app
-# Copy only the files strictly needed for the setup script
+
+# COPY ONLY THE FILES THAT EXIST
 COPY biomni_env/setup.sh .
 COPY biomni_env/environment.yml .
 COPY biomni_env/bio_env.yml .
+COPY biomni_env/bio_env_py310.yml .
 COPY biomni_env/r_packages.yml .
 COPY biomni_env/install_r_packages.R .
 COPY biomni_env/install_cli_tools.sh .
 COPY biomni_env/new_software_v006.sh .
-COPY biomni_env/setup_path.sh .
+COPY biomni_env/fixed_env.yml .
 
-# 3. Execution Fix: Run the entire setup script inside the base environment.
-# Note: The 'setup.sh' script's logic must create the 'biomni_e1' environment
-# and handle the package installation/activation within its own logic.
-# We ensure line endings are clean before execution.
+
+# 3. Execution: Run the environment creation and setup script.
+# We ensure the base Conda environment is used.
 RUN dos2unix setup.sh && \
-    yes | bash setup.sh
+    /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+    yes | bash setup.sh"
