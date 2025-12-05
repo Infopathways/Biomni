@@ -29,3 +29,6 @@ COPY biomni_env/fixed_env.yml .
 RUN dos2unix setup.sh && \
     /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
     yes | bash setup.sh"
+
+# 4. Build the HTML documentation after the environment is set up
+RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate biomni_env && make html"
