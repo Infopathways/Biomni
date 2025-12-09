@@ -1,30 +1,34 @@
-# Dockerfile.base - FINAL RELIABLE BUILD VERSION
-# This version skips the complex setup.sh script and installs the core environment directly.
-FROM continuumio/miniconda3 AS builder
+# Dockerfile.base - FINAL, FINAL, FINAL VERSION
+# This version removes the missing file and uses the simplest execution method.
+
+FROM continuumio/miniconda3
 
 # 1. Install System Utilities & Fix Line Endings
-ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    build-essential dos2unix git wget \
-    && rm -rf /var/lib/apt/lists/*
+    build-essential dos2unix && \
+    conda clean --all -f -y
 
-# 2. Set workdir and Copy ONLY the necessary environment file
+# 2. Set workdir and Copy scripts
 WORKDIR /app
-# We use fixed_env.yml which is designed to be stable (without R or CLI tools)
-COPY biomni_env/fixed_env.yml .
+
+# COPY ONLY THE FILES THAT EXIST
 COPY biomni_env/setup.sh .
+COPY biomni_env/environment.yml .
+COPY biomni_env/bio_env.yml .
+COPY biomni_env/bio_env_py310.yml .
+COPY biomni_env/r_packages.yml .
+COPY biomni_env/install_r_packages.R .
+COPY biomni_env/install_cli_tools.sh .
+COPY biomni_env/new_software_v006.sh .
+COPY biomni_env/fixed_env.yml .
 
-# 3. CRITICAL EXECUTION: Create the 'biomni_e1' environment directly.
-# NOTE: The environment name must be correctly defined inside fixed_env.yml (e.g., 'biomni_e1')
-# If the environment name is different (e.g., 'fixed_env'), you must change the '--name' here.
-# This step replaces the unreliable logic inside setup.sh.
 
-RUN conda env create -f fixed_env.yml --name biomni_e1
-RUN conda clean --all -f -y
+# 3. Execution: Run the environment creation and setup script.
+# We ensure the base Conda environment is used.
+RUN dos2unix setup.sh && \
+    /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+    yes | bash setup.sh"
 
-# 4. Final step for debugging: Activate and ensure the environment exists.
-# We run a dummy command to confirm the environment is usable.
-RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate biomni_e1 && echo 'Biomni environment successfully created!'"
-
-# If this step succeeds, the environment is stable and ready to be used by the application.
+# 4. Build the HTML documentation after the environment is set up
+RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate biomni_e1 && cd docs && make html"
