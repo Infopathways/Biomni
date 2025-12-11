@@ -1,7 +1,7 @@
 name: Build and Deploy Documentation to Azure App Service
 
-on:
-  workflow_dispatch:
+#on:
+ # workflow_dispatch:
 
 env:
   AZURE_WEBAPP_NAME: 'biomni-app-host'  # This is the only variable we need now
