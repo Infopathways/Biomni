@@ -1,0 +1,13 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+.envrc
+.git
+.gitignore
+build/
+dist/
+*.egg-info
+.vscode/
+.ipynb_checkpoints
