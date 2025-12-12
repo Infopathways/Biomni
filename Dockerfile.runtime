@@ -9,11 +9,12 @@ COPY biomni_env/fixed_env.yml .
 SHELL ["/bin/bash", "-lc"]
 
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential dos2unix && \
-    dos2unix biomni_env/setup.sh && \
+    dos2unix setup.sh && \
     source /opt/conda/etc/profile.d/conda.sh && \
-    yes | bash biomni_env/setup.sh && \
+    yes | bash setup.sh && \
     /opt/conda/envs/biomni_e1/bin/python -m pip install conda-pack && \
     /opt/conda/envs/biomni_e1/bin/python -m conda_pack -n biomni_e1 -o /tmp/biomni_e1.tar.gz
+
 
 # Copy the full repository into builder so package artifacts can be included as needed
 COPY . /app
