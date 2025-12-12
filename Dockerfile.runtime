@@ -5,6 +5,12 @@ WORKDIR /app
 COPY biomni_env/setup.sh .
 COPY biomni_env/environment.yml .
 COPY biomni_env/fixed_env.yml .
+COPY biomni_env/bio_env.yml .
+COPY biomni_env/bio_env_py310.yml .
+COPY biomni_env/r_packages.yml .
+COPY biomni_env/install_r_packages.R .
+COPY biomni_env/install_cli_tools.sh .
+COPY biomni_env/new_software_v006.sh .
 
 SHELL ["/bin/bash", "-lc"]
 
