@@ -19,11 +19,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
     source /opt/conda/etc/profile.d/conda.sh && \
     yes | bash setup.sh && \
     /opt/conda/envs/biomni_e1/bin/python -m pip install conda-pack && \
-    /opt/conda/envs/biomni_e1/bin/python -m conda_pack -n biomni_e1 -o /tmp/biomni_e1.tar.gz
+    /opt/conda/envs/biomni_e1/bin/conda-pack -n biomni_e1 -o /tmp/biomni_e1.tar.gz
 
-
-# Copy the full repository into builder so package artifacts can be included as needed
-COPY . /app
 
 FROM continuumio/miniconda3 AS runtime
 WORKDIR /app
@@ -46,6 +43,6 @@ RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> /etc/profile.d/conda.sh
 ENV PATH=/opt/conda/envs/biomni_e1/bin:$PATH
 ENV PYTHONPATH=/app:$PYTHONPATH
 
-RUN chmod +x /app/start.sh || true
+RUN chmod +x ./start.sh
 EXPOSE 7860
 CMD ["/app/start.sh"]
