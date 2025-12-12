@@ -1,8 +1,8 @@
 FROM continuumio/miniconda3 AS builder
 WORKDIR /app
 
-# Copy only the environment/setup bits to create env quickly
-COPY biomni_env/setup.sh biomni_env/environment.yml biomni_env/fixed_env.yml ./biomni_env/
+# Copy the entire biomni_env directory
+COPY biomni_env ./biomni_env
 
 SHELL ["/bin/bash", "-lc"]
 
@@ -28,8 +28,9 @@ RUN mkdir -p /opt/conda/envs/biomni_e1 && \
     tar -xzf /tmp/biomni_e1.tar.gz -C /opt/conda/envs/biomni_e1 --strip-components=1 && \
     rm /tmp/biomni_e1.tar.gz
 
-# Copy application files
-COPY --from=builder /app /app
+# Copy only the necessary application files
+COPY app ./app
+COPY start.sh ./start.sh
 
 # Ensure conda activation works and put env bin on PATH
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> /etc/profile.d/conda.sh
