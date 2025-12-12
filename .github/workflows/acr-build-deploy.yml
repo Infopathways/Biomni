@@ -14,15 +14,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-        # Free up disk space on the runner by removing unneeded software.
-      - name: Free up disk space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # This removes Android and Haskell toolchains
-          tool-cache: false
-          android: true
-          haskell: true
-          remove-azure-cli: false
+      - name: Free up disk space on runner
+        run: |
+          echo "Initial free space:"
+          df -h
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          echo "Free space after cleanup:"
+          df -h
 
       - name: Login to Azure
         uses: azure/login@v2
