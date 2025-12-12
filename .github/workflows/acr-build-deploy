@@ -11,7 +11,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Login to Azure
@@ -19,26 +19,16 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Build image in ACR (az acr build)
-        run: |
-          az acr build --registry ${{ secrets.ACR_NAME }} \
-            --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            --file Dockerfile.runtime .
+      - name: Log in to Azure Container Registry
+        run: az acr login --name ${{ secrets.ACR_NAME }}
 
-      - name: Update App Service to use new image
+      - name: Build and push runtime image to ACR
         run: |
-          IMAGE_FULL=${{ secrets.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          az webapp config container set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ secrets.RESOURCE_GROUP }} \
-            --docker-custom-image-name $IMAGE_FULL
+          docker build . -f Dockerfile.runtime -t ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-      - name: Set WEBSITES_PORT to 7860
-        run: |
-          az webapp config appsettings set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ secrets.RESOURCE_GROUP }} \
-            --settings WEBSITES_PORT=7860
-
-      - name: Restart App Service
-        run: az webapp restart --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ secrets.RESOURCE_GROUP }}
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          images: '${{ secrets.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}'
