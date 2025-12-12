@@ -1,8 +1,10 @@
 FROM continuumio/miniconda3 AS builder
 WORKDIR /app
 
-# Copy the entire biomni_env directory
-COPY biomni_env ./biomni_env
+# Copy the necessary files individually into the /app directory
+COPY biomni_env/setup.sh .
+COPY biomni_env/environment.yml .
+COPY biomni_env/fixed_env.yml .
 
 SHELL ["/bin/bash", "-lc"]
 
