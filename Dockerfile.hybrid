@@ -1,4 +1,5 @@
-# Final Dockerfile - Using the Mamba Solver
+# Dockerfile - this one successfully deploys in Azure
+# Using the Mamba Solver
 
 FROM continuumio/miniconda3
 
@@ -7,7 +8,7 @@ WORKDIR /app
 # Copy the environment file
 COPY biomni_env/environment.yml ./environment.yml
 
-# 1. Install the faster, more memory-efficient mamba solver from conda-forge.
+# 1. Install the mamba solver from conda-forge.
 # 2. Set the solver to mamba permanently.
 # 3. Configure the correct channel priority permanently.
 RUN conda install -n base conda-libmamba-solver -c conda-forge -y && \
@@ -16,8 +17,8 @@ RUN conda install -n base conda-libmamba-solver -c conda-forge -y && \
     conda config --add channels bioconda && \
     conda config --add channels conda-forge
 
-# Now, create the entire environment from the file in one go.
-# Mamba will handle the complex dependencies (including cpu-only PyTorch) more efficiently.
+# Create the entire environment from the file.
+# Mamba will handle the complex dependencies more efficiently.
 RUN conda env create -f environment.yml
 
 # Copy application files
