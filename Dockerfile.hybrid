@@ -1,0 +1,44 @@
+# Dockerfile.hybrid
+# This version attempts to build the Conda environment in stages to avoid memory spikes on the standard runner.
+
+FROM continuumio/miniconda3
+
+WORKDIR /app
+
+# Copy only the environment file.
+COPY biomni_env/environment.yml ./environment.yml
+
+# Use the login shell to make conda commands easier
+SHELL ["/bin/bash", "-lc"]
+
+# --- THE HYBRID STRATEGY ---
+# Stage 1: Create an empty environment. This is a very fast, low-memory operation.
+RUN conda create --name biomni_e1 python=3.10 -y
+
+# Stage 2: Activate the environment and install packages in smaller, targeted groups.
+# We install the biggest, most complex packages first, one by one. This avoids a massive dependency resolution spike.
+# Note: This is slow, but aims for stability.
+RUN conda activate biomni_e1 && conda install -c conda-forge r-base -y
+RUN conda activate biomni_e1 && conda install -c conda-forge r-essentials -y
+RUN conda activate biomni_e1 && conda install -c bioconda bioconductor-deseq2 -y
+RUN conda activate biomni_e1 && conda install pytorch torchvision torchaudio -c pytorch -y
+
+# Stage 3: Install the rest of the packages from the environment file.
+RUN conda env update -n biomni_e1 -f environment.yml
+
+# Ensure conda is initialized for future shells
+RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> /etc/profile.d/conda.sh
+
+# Copy application files
+COPY app ./app
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
+
+# Expose the default Gradio port
+EXPOSE 7860
+
+# Add conda env bin to PATH for the final command
+ENV PATH /opt/conda/envs/biomni_e1/bin:$PATH
+
+# Default command
+CMD ["./start.sh"]
