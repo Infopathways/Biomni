@@ -23,8 +23,11 @@ COPY biomni_env/install_cli_tools.sh .
 COPY biomni_env/new_software_v006.sh .
 COPY biomni_env/fixed_env.yml .
 
-COPY app/gradio_app.py .
+COPY app/gradio_app.py app/gradio_app.py
 COPY biomni ./biomni
+
+COPY start.sh .
+RUN chmod +x start.sh
 
 # 3. Execution: Run the environment creation and setup script.
 # We ensure the base Conda environment is used.
@@ -32,5 +35,8 @@ RUN dos2unix setup.sh && \
     /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
     yes | bash setup.sh"
 
-# This activates the environment and starts the Gradio web server.
-CMD /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate biomni_e1 && python gradio_app.py"
+EXPOSE 7860
+
+# Define the command to run when the container starts.
+# This uses the official startup script.
+CMD ["./start.sh"]
