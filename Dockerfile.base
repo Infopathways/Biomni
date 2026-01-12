@@ -23,7 +23,7 @@ COPY biomni_env/install_cli_tools.sh .
 COPY biomni_env/new_software_v006.sh .
 COPY biomni_env/fixed_env.yml .
 
-COPY gradio_app.py .
+COPY app/gradio_app.py .
 COPY biomni ./biomni  # This copies the entire 'biomni' folder and its contents
 
 # 3. Execution: Run the environment creation and setup script.
