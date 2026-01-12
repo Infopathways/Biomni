@@ -1,7 +1,6 @@
 # Final Dockerfile - Using the Mamba Solver
 
-# Use a specific Miniconda version for stability
-FROM continuumio/miniconda3:py310_23.1.0-1
+FROM continuumio/miniconda3
 
 WORKDIR /app
 
