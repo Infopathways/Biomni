@@ -1,42 +1,36 @@
-# Dockerfile.hybrid
-# This version attempts to build the Conda environment in stages to avoid memory spikes on the standard runner.
+# Final Dockerfile - Using the Mamba Solver
 
-FROM continuumio/miniconda3
+# Use a specific Miniconda version for stability
+FROM continuumio/miniconda3:py310_23.1.0-1
 
 WORKDIR /app
 
-# Copy only the environment file.
+# Copy the environment file
 COPY biomni_env/environment.yml ./environment.yml
 
-# Use the login shell to make conda commands easier
-SHELL ["/bin/bash", "-lc"]
+# 1. Install the faster, more memory-efficient mamba solver from conda-forge.
+# 2. Set the solver to mamba permanently.
+# 3. Configure the correct channel priority permanently.
+RUN conda install -n base conda-libmamba-solver -c conda-forge -y && \
+    conda config --set solver libmamba && \
+    conda config --add channels defaults && \
+    conda config --add channels bioconda && \
+    conda config --add channels conda-forge
 
-RUN conda create --name biomni_e1 python=3.10 -y
+# Now, create the entire environment from the file in one go.
+# Mamba will handle the complex dependencies (including cpu-only PyTorch) more efficiently.
+RUN conda env create -f environment.yml
 
-# Stage 2: Activate the environment and install packages in smaller, targeted groups.
-RUN conda activate biomni_e1 && conda install -c conda-forge -c bioconda -c defaults r-base r-essentials -y
-RUN conda activate biomni_e1 && conda install -c conda-forge -c bioconda -c defaults bioconductor-deseq2 -y
-RUN conda activate biomni_e1 && conda install pytorch torchvision torchaudio cpuonly -c conda-forge -y
-
-# Stage 3: Update the rest of the environment, enforcing the same priority.
-RUN conda config --env --add channels defaults && \
-    conda config --env --add channels bioconda && \
-    conda config --env --add channels conda-forge && \
-    conda env update -n biomni_e1 -f environment.yml
-
-# Ensure conda is initialized for future shells
-RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> /etc/profile.d/conda.sh
+# Set the shell to use the new environment by default.
+SHELL ["/bin/bash", "-lc", "conda activate biomni_e1 &&"]
 
 # Copy application files
 COPY app ./app
 COPY start.sh ./start.sh
 RUN chmod +x ./start.sh
 
-# Expose the default Gradio port
+# Expose the port
 EXPOSE 7860
-
-# Add conda env bin to PATH for the final command
-ENV PATH /opt/conda/envs/biomni_e1/bin:$PATH
 
 # Default command
 CMD ["./start.sh"]
