@@ -16,7 +16,7 @@ RUN conda create --name biomni_e1 python=3.10 -y
 # Stage 2: Activate the environment and install packages in smaller, targeted groups.
 RUN conda activate biomni_e1 && conda install -c conda-forge -c bioconda -c defaults r-base r-essentials -y
 RUN conda activate biomni_e1 && conda install -c conda-forge -c bioconda -c defaults bioconductor-deseq2 -y
-RUN conda activate biomni_e1 && conda install pytorch torchvision torchaudio cpuonly -c pytorch -y
+RUN conda activate biomni_e1 && conda install pytorch torchvision torchaudio cpuonly -c conda-forge -y
 
 # Stage 3: Update the rest of the environment, enforcing the same priority.
 RUN conda config --env --add channels defaults && \
