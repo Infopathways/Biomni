@@ -24,7 +24,7 @@ COPY biomni_env/new_software_v006.sh .
 COPY biomni_env/fixed_env.yml .
 
 COPY app/gradio_app.py .
-COPY biomni ./biomni  # This copies the entire 'biomni' folder and its contents
+COPY biomni ./biomni
 
 # 3. Execution: Run the environment creation and setup script.
 # We ensure the base Conda environment is used.
