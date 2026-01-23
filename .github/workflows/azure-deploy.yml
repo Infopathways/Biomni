@@ -1,6 +1,9 @@
 name: Build and Deploy to Azure App Service
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 env:
@@ -20,11 +23,13 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: 'Log in to Azure Container Registry'     
+    - name: 'Log in to Azure Container Registry'
       run: az acr login --name ${{ vars.REGISTRY_NAME }}
 
     - name: 'Build and push image to Azure Container Registry'
       run: |
+        # --- THIS IS THE FIX ---
+        # Pointing to the correct file name as you specified.
         docker build . -f Dockerfile.hybrid -t ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
         docker push ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
@@ -33,5 +38,3 @@ jobs:
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
         images: '${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}'
-
-        app-settings: '[{"name": "WEBSITES_CONTAINER_START_TIME_LIMIT", "value": "1800", "slotSetting": true}, {"name": "OPENAI_API_KEY", "value": "${{ secrets.OPENAI_API_KEY }}", "slotSetting": true}]'
