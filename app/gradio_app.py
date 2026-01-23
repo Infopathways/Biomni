@@ -1,85 +1,48 @@
 import os
 import argparse
-import traceback
-import gradio as gr
+import json  # Import the json library
 
-# We will create the agent instance only when it's first needed.
-# Initialize agent_instance to None. It will act as our flag.
-agent_instance = None
-AGENT_AVAILABLE = False
-INITIALIZATION_ERROR = None
+# --- Debugging Setup ---
+# We will not try to load the agent at all in this version.
+# We will focus ONLY on inspecting the environment.
+has_dumped_env = False
 
-def initialize_agent():
-    """
-    This function handles the one-time initialization of the agent.
-    It will only be called the first time a user sends a message.
-    """
-    global agent_instance, AGENT_AVAILABLE, INITIALIZATION_ERROR
-
-    # If already initialized, do nothing.
-    if agent_instance is not None:
-        return
-
-    print("--- LAZY LOADING: First request received, attempting to initialize Biomni agent... ---")
-    try:
-        from biomni.agent.a1 import A1
-        
-        OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-        if not OPENAI_API_KEY:
-            raise ValueError("CRITICAL ERROR: OPENAI_API_KEY environment variable not found. Check deployment settings.")
-
-        # Explicitly configure the agent.
-        agent_instance = A1(
-            source="OpenAI",
-            llm="gpt-4-turbo", # Or "gpt-3.5-turbo"
-            api_key=OPENAI_API_KEY
-        )
-        AGENT_AVAILABLE = True
-        print("--- LAZY LOADING: Agent initialized successfully. ---")
-
-    except Exception as e:
-        INITIALIZATION_ERROR = e
-        AGENT_AVAILABLE = False
-        print("--- FATAL: FAILED TO LAZILY INITIALIZE BIOMNI AGENT ---")
-        traceback.print_exc()
-
+# --- Debugging Function ---
 def respond(text: str) -> str:
     """
-    This handler now ensures the agent is initialized, then calls it.
+    This is a special debugging handler.
+    On the first run, it will dump all environment variables to the UI.
+    On subsequent runs, it will just echo.
     """
-    # This is the key: initialize the agent on the first call.
-    initialize_agent()
+    global has_dumped_env
 
-    # Now check the status after attempting initialization.
-    if not AGENT_AVAILABLE or agent_instance is None:
-        error_msg = f"Agent failed to initialize. Error: {INITIALIZATION_ERROR}"
-        print(error_msg)
-        return error_msg
-    
-    if not text:
-        return "(empty)"
-
-    try:
-        print(f"Passing message to agent: '{text}'")
-        final_response = "Agent did not return a response."
-        for chunk in agent_instance.go_stream(text):
-            if "output" in chunk and isinstance(chunk["output"], str):
-                final_response = chunk["output"]
+    if not has_dumped_env:
+        print("--- DUMPING ALL ENVIRONMENT VARIABLES ---")
         
-        print(f"Final response from agent: '{final_response}'")
-        return final_response
-    except Exception as e:
-        print(f"--- ERROR DURING AGENT EXECUTION ---")
-        traceback.print_exc()
-        return f"An error occurred within the agent: {e}"
+        # Get all environment variables as a dictionary
+        all_vars = dict(os.environ)
+        
+        # Format the dictionary as a nicely indented JSON string
+        # This makes it easy to read in the Gradio UI.
+        pretty_json_string = json.dumps(all_vars, indent=2, sort_keys=True)
+        
+        # Set the flag so we don't do this again
+        has_dumped_env = True
+        
+        # Return the full list to the UI
+        return pretty_json_string
+    else:
+        # On subsequent calls, just echo.
+        return "Environment has been dumped. Echoing: " + text
 
+# --- The rest of the file is standard UI setup ---
 def main(host: str, port: int):
     iface = gr.Interface(
         fn=respond,
         inputs="text",
         outputs="text",
-        title="Biomni Gradio UI",
-        description="A minimal Gradio UI for Biomni. This now calls the agent.",
+        title="Biomni - Environment Inspector",
+        description="Send any message to see all environment variables available to the container.",
     )
     print(f"Launching Gradio UI on {host}:{port}")
     iface.launch(server_name=host, server_port=port, share=False)
