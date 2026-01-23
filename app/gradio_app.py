@@ -1,58 +1,62 @@
 import os
 import argparse
-import traceback  # Import for better error logging
+import traceback
 import gradio as gr
 
+# --- NEW: Read the API key securely from the environment ---
+# This line reads the key provided by your azure-deploy.yml file.
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-# This block runs once when the application starts.
+# --- MODIFIED: Import and Initialize the Agent ---
 try:
     from biomni.agent.a1 import A1
     print("Initializing Biomni agent...")
-    agent_instance = A1()
+
+    # Check if the API key was found in the environment.
+    if not OPENAI_API_KEY:
+        raise ValueError("CRITICAL ERROR: OPENAI_API_KEY environment variable was not found by the application.")
+
+    # Explicitly configure the agent to use only OpenAI.
+    # This tells the agent which key to use and prevents the authentication error.
+    agent_instance = A1(
+        source="OpenAI",
+        llm="gpt-4-turbo",  # Or another model like "gpt-3.5-turbo"
+        api_key=OPENAI_API_KEY
+    )
     AGENT_AVAILABLE = True
-    print("Successfully initialized Biomni agent.")
-except Exception:
+    print("Successfully initialized Biomni agent with OpenAI configuration.")
+
+except Exception as e:
     agent_instance = None
     AGENT_AVAILABLE = False
     print("--- FATAL: FAILED TO INITIALIZE BIOMNI AGENT ---")
     traceback.print_exc()
+
+# --- The rest of the file defines the web interface logic ---
 
 def respond(text: str) -> str:
     """
     This handler now calls the biomni agent's .go_stream() method
     and returns the final complete response.
     """
-    # First, check if the agent loaded correctly during startup.
     if not AGENT_AVAILABLE or agent_instance is None:
-        return "ERROR: The Biomni agent is not available. Check application logs."
-
-    # If the user input is empty, don't call the agent.
+        return "ERROR: The Biomni agent is not available. Please check the application logs for why it failed to start."
     if not text:
         return "(empty)"
-
     try:
         print(f"Passing message to agent: '{text}'")
-        
-        # Call the agent's .go_stream() method.
-        # Since gr.Interface expects a single final string, we loop through the
-        # stream and capture only the last (most complete) response.
         final_response = "Agent did not return a response."
         for chunk in agent_instance.go_stream(text):
             if "output" in chunk and isinstance(chunk["output"], str):
                 final_response = chunk["output"]
-        
         print(f"Final response from agent: '{final_response}'")
         return final_response
-
     except Exception as e:
-        # If the agent fails during execution, print the error and return it to the UI.
         print(f"--- ERROR DURING AGENT EXECUTION ---")
         traceback.print_exc()
         return f"An error occurred within the agent: {e}"
 
-
 def main(host: str, port: int):
-    # The original gr.Interface is kept, but its 'fn' now points to our new respond logic.
     iface = gr.Interface(
         fn=respond,
         inputs="text",
@@ -60,10 +64,8 @@ def main(host: str, port: int):
         title="Biomni Gradio UI",
         description="A minimal Gradio UI for Biomni. This now calls the agent.",
     )
-    
     print(f"Launching Gradio UI on {host}:{port}")
     iface.launch(server_name=host, server_port=port, share=False)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
