@@ -9,13 +9,12 @@ on:
 env:
   REGISTRY_LOGIN_SERVER: 'infopathwaysbiomni.azurecr.io'
   IMAGE_NAME: 'biomni-app'
-  AZURE_WEBAPP_NAME: 'biomni-app-host' # Targeting your existing Windows app
+  AZURE_WEBAPP_NAME: 'biomni-app-host'
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-    # This part is unchanged: Checkout, Login, Build, Push
     - name: 'Checkout GitHub Action'
       uses: actions/checkout@v3
 
@@ -32,18 +31,18 @@ jobs:
         docker build . -f Dockerfile.hybrid -t ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
         docker push ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-    # Step 1 of deployment: Deploy the image (no app-settings here)
     - name: 'Deploy container to Azure App Service'
       uses: azure/webapps-deploy@v2
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
         images: '${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}'
 
-    # Step 2 of deployment: Force-set the environment variables using the Azure CLI
     - name: 'Set Environment Variables via Azure CLI'
       uses: azure/cli@v2
       with:
         inlineScript: |
           echo "Setting environment variables for ${{ env.AZURE_WEBAPP_NAME }}..."
-          az webapp config appsettings set --resource-group ${{ vars.RESOURCE_GROUP_NAME }} --name ${{ env.AZURE_WEBAPP_NAME }} --settings "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" "WEBSITES_CONTAINER_START_TIME_LIMIT=1800"
+          # --- THIS IS THE FIX ---
+          # The resource group name is now hardcoded to eliminate the failing variable.
+          az webapp config appsettings set --resource-group Biomni-test --name ${{ env.AZURE_WEBAPP_NAME }} --settings "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" "WEBSITES_CONTAINER_START_TIME_LIMIT=1800"
           echo "Environment variables set."
