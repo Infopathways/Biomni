@@ -33,3 +33,7 @@ jobs:
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
         images: '${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}'
+
+        app-settings: |
+            WEBSITES_CONTAINER_START_TIME_LIMIT=1800
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
