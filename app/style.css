@@ -1,0 +1,40 @@
+:root {
+    --primary-accent: #ff8800; 
+    --background-primary: #121212; 
+    --background-secondary: #242424; 
+    --text-primary: #ffffff; 
+    --text-secondary: #b3b3b3; 
+    --border-color: #333333;
+}
+
+gradio-app {
+    background-color: var(--background-primary) !important;
+}
+
+.prose h1 {
+    color: var(--primary-accent) !important;
+}
+
+.prose p {
+    color: var(--text-secondary) !important;
+}
+
+.example-button {
+    background-color: var(--background-secondary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+.example-button:hover {
+    background-color: var(--border-color) !important; 
+}
+
+.gradio-button.primary {
+    background-color: var(--primary-accent) !important;
+    color: var(--text-primary) !important;
+    border: none !important;
+}
+
+.message-bubble {
+    background-color: var(--background-secondary) !important;
+    color: var(--text-primary) !important;
+}
