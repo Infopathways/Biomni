@@ -42,7 +42,4 @@ jobs:
       with:
         inlineScript: |
           echo "Setting environment variables for ${{ env.AZURE_WEBAPP_NAME }}..."
-          # --- THIS IS THE FIX ---
-          # The resource group name is now hardcoded to eliminate the failing variable.
-          az webapp config appsettings set --resource-group Biomni-test --name ${{ env.AZURE_WEBAPP_NAME }} --settings "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" "WEBSITES_CONTAINER_START_TIME_LIMIT=1800"
-          echo "Environment variables set."
+          az webapp config appsettings set --resource-group Biomni-test --name ${{ env.AZURE_WEBAPP_NAME }} --settings "OPENAI_API_KEY=${{ secrets.HATZ_API_KEY }}" "OPENAI_API_BASE=https://proxy.hatz.ai/v1" "OPENAI_API_TYPE=azure" "WEBSITES_CONTAINER_START_TIME_LIMIT=1800"
