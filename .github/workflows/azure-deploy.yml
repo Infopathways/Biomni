@@ -24,7 +24,7 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: 'Log in to Azure Container Registry'
-      run: az acr login --name ${{ vars.REGISTRY_NAME }}
+      run: az acr login --name ${{ secrets.ACR_NAME }} # <-- CHANGE #1: Using secrets.ACR_NAME
 
     - name: 'Build and push image to Azure Container Registry'
       run: |
