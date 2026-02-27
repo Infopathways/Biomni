@@ -56,8 +56,8 @@ def main(host: str, port: int):
         fn=respond,
         inputs="text",
         outputs="text",
-        title="Biomni Gradio UI",
-        description="A minimal Gradio UI for Biomni. This now calls the agent.",
+        title="Biomni Agent",
+        description="Chat with Biomni",
     )
     print(f"Launching Gradio UI on {host}:{port}")
     iface.launch(server_name=host, server_port=port, share=False)
