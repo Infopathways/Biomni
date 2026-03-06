@@ -40,9 +40,6 @@ def respond(message, history):
 def main(host: str, port: int):
     print("--- Using gr.ChatInterface to avoid Blocks bug ---")
     
-    # gr.ChatInterface is a complete, pre-built UI.
-    # It is designed to work with a function that takes (message, history)
-    # and returns a single string response. Our `respond` function is perfect for this.
     iface = gr.ChatInterface(
         fn=respond,
         title="BioMni Agent",
