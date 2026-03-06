@@ -41,29 +41,26 @@ def main(host: str, port: int):
         gr.Markdown("# Biomni Agent")
         gr.Markdown("A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.")
 
-        # Create the chatbot window and the text input box
         chatbot = gr.Chatbot()
         msg = gr.Textbox(label="Your Question")
         clear = gr.ClearButton([msg, chatbot])
 
-        def user_submit(user_message, history):
-            # Add user message to chat history, then get the bot's response
-            return "", history + [[user_message, None]]
+        # This single function handles the entire process correctly.
+        def handle_user_message(user_message, history):
+            # 1. Add the user's message to the chat history.
+            history.append([user_message, None])
+            # 2. Get the bot's response using your existing 'respond' function.
+            bot_response = respond(user_message)
+            # 3. Add the bot's response to the history.
+            history[-1][1] = bot_response
+            # 4. Return an empty string to clear the textbox and the updated history to update the chatbot.
+            return "", history
 
-        def bot_response(history):
-            # Get the latest user message
-            user_message = history[-1][0]
-            # Get the agent's response using your existing 'respond' function
-            bot_message = respond(user_message)
-            # Update the history with the bot's full response
-            history[-1][1] = bot_message
-            return history
+        # The .submit() event now calls our single handler function.
+        # It takes the message and history as input, and updates the message and history as output.
+        msg.submit(handle_user_message, [msg, chatbot], [msg, chatbot])
 
-        msg.submit(user_submit, [msg, chatbot], [msg, chatbot], queue=False).then(
-            bot_response, chatbot, chatbot
-        )
-
-        # example questions
+        # --- Example questions section is unchanged and correct ---
         gr.Examples(
             examples=[
                 "What genes are associated with Alzheimer's disease?",
