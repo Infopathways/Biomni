@@ -47,7 +47,6 @@ def main(host: str, port: int):
         fn=respond,
         title="BioMni Agent",
         description="A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.",
-        css="style.css",
         examples=[
             "What genes are associated with Alzheimer's disease?",
             "Show me the protein expression for TP53.",
@@ -59,7 +58,7 @@ def main(host: str, port: int):
     )
 
     print(f"Launching Gradio UI on {host}:{port}")
-    iface.launch(server_name=host, server_port=port, share=False)
+    iface.launch(server_name=host, server_port=port, share=False, css="style.css")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
