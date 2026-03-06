@@ -37,6 +37,9 @@ def respond(text: str) -> str:
         return f"An error occurred within the agent: {e}"
 
 def main(host: str, port: int):
+    # This print statement proves the app is starting with the new code.
+    print("--- [DIAGNOSTIC CHECK] Application starting with the single-function handler. ---")
+
     with gr.Blocks(css="style.css") as iface: 
         gr.Markdown("# Biomni Agent")
         gr.Markdown("A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.")
@@ -45,22 +48,20 @@ def main(host: str, port: int):
         msg = gr.Textbox(label="Your Question")
         clear = gr.ClearButton([msg, chatbot])
 
-        # This single function handles the entire process correctly.
+        # This single function has diagnostic print statements inside.
         def handle_user_message(user_message, history):
-            # 1. Add the user's message to the chat history.
+            print(f"--- [DIAGNOSTIC CHECK] handle_user_message function was called. ---")
+            print(f"--- [DIAGNOSTIC CHECK] History received by function: {history}")
+
             history.append([user_message, None])
-            # 2. Get the bot's response using your existing 'respond' function.
             bot_response = respond(user_message)
-            # 3. Add the bot's response to the history.
             history[-1][1] = bot_response
-            # 4. Return an empty string to clear the textbox and the updated history to update the chatbot.
+            
+            print(f"--- [DIAGNOSTIC CHECK] History being returned: {history}")
             return "", history
 
-        # The .submit() event now calls our single handler function.
-        # It takes the message and history as input, and updates the message and history as output.
         msg.submit(handle_user_message, [msg, chatbot], [msg, chatbot])
 
-        # --- Example questions section is unchanged and correct ---
         gr.Examples(
             examples=[
                 "What genes are associated with Alzheimer's disease?",
