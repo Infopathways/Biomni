@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY_LOGIN_SERVER: 'infopathwaysbiomni.azurecr.io'
-  IMAGE_NAME: 'biomni-app'
+  IMAGE_NAME: 'biomni-app-v2'
   AZURE_WEBAPP_NAME: 'biomni-app-host'
 
 jobs:
