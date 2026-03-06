@@ -28,7 +28,7 @@ jobs:
 
     - name: 'Build and push image to Azure Container Registry'
       run: |
-        docker build . -f Dockerfile.hybrid -t ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        docker build --no-cache . -f Dockerfile.hybrid -t ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
         docker push ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
     - name: 'Deploy container to Azure App Service'
