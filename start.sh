@@ -4,6 +4,11 @@ set -e
 # Determine port (supports Azure WEBSITES_PORT or PORT env vars)
 PORT=${PORT:-${WEBSITES_PORT:-7860}}
 
+# clean up
+echo "Cleaning up temporary directory before startup..."
+rm -rf /tmp/*
+echo "Cleanup complete."
+
 # Activate conda environment
 source /opt/conda/etc/profile.d/conda.sh
 conda activate biomni_e1
