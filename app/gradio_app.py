@@ -49,7 +49,6 @@ def main(host: str, port: int):
             "Show me the protein expression for TP53.",
             "What is the function of the BRCA1 gene?"
         ],
-        undo_btn=None,
         clear_btn="Clear Chat",
     )
 
