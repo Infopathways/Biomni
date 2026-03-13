@@ -21,6 +21,8 @@ RUN conda install -n base conda-libmamba-solver -c conda-forge -y && \
 # Mamba will handle the complex dependencies more efficiently.
 RUN conda env create -f environment.yml
 
+RUN conda clean -a -y && echo "Conda cache cleaned."
+
 # Copy application files
 COPY app ./app
 COPY start.sh ./start.sh
