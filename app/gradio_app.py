@@ -6,13 +6,14 @@ import gradio as gr
 try:
     from biomni.agent.a1 import A1
     print("Initializing Biomni agent on startup...")
-    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-    if not OPENAI_API_KEY:
-        raise ValueError("CRITICAL ERROR: OPENAI_API_KEY not found. This must be set in the Azure Portal Configuration.")
+    HATZ_API_KEY = os.environ.get("HATZ_API_KEY")
+    if not HATZ_API_KEY:
+        raise ValueError("CRITICAL ERROR: HATZ_API_KEY not found. This must be set in the Azure Portal Configuration.")
+
     agent_instance = A1(
-        source="OpenAI",
-        llm="gpt-4-turbo",
-        api_key=OPENAI_API_KEY
+        llm='gpt-4-turbo', 
+        api_key=os.environ.get("HATZ_API_KEY"),  
+        base_url="https://proxy.hatz.ai/v1"
     )
     AGENT_AVAILABLE = True
     print("Successfully initialized Biomni agent.")
