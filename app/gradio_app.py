@@ -43,7 +43,7 @@ def main(host: str, port: int):
     
     iface = gr.ChatInterface(
         fn=respond,
-        title="BioMni Agent",
+        title="Biomni Agent",
         description="A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.",
         examples=[
             "What genes are associated with Alzheimer's disease?",
