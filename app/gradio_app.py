@@ -54,7 +54,6 @@ def main(host: str, port: int):
     )
 
     iface.queue(
-        default_concurrency_limit=20,
         max_allowed_time=600 
     )
 
