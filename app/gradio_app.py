@@ -52,6 +52,7 @@ def main(host: str, port: int):
             "What is the function of the BRCA1 gene?"
         ],
     )
+    iface.queue(default_concurrency_limit=20)
 
     print(f"Launching Gradio UI on {host}:{port}")
     iface.launch(server_name=host, server_port=port, share=False, css="style.css")
