@@ -13,7 +13,8 @@ try:
     agent_instance = A1(
         llm='gpt-4-turbo', 
         api_key=os.environ.get("HATZ_API_KEY"),  
-        base_url="https://proxy.hatz.ai/v1"
+        base_url="https://proxy.hatz.ai/v1",
+        timeout_seconds=600
     )
     AGENT_AVAILABLE = True
     print("Successfully initialized Biomni agent.")
