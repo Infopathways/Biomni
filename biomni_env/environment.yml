@@ -8,6 +8,7 @@ dependencies:
   - pip
   - pip:
       - numpy
+      - huggingface-hub==0.20.3
       - pandas
       - matplotlib
       - scipy
