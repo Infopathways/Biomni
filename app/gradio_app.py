@@ -53,9 +53,7 @@ def main(host: str, port: int):
         ],
     )
 
-    iface.queue(
-        max_allowed_time=600 
-    )
+    iface.queue()
 
     print(f"Launching Gradio UI on {host}:{port}")
     iface.launch(server_name=host, server_port=port, share=False, css="style.css")
