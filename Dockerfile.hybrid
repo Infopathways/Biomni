@@ -7,6 +7,9 @@ RUN apt-get update && \
     apt-get clean
 
 ENV PATH /opt/conda/bin:$PATH
+RUN conda config --set auto_update_conda false && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+
 WORKDIR /app
 COPY biomni_env/environment.yml .
 
