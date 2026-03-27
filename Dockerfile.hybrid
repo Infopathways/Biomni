@@ -1,35 +1,23 @@
-# Dockerfile - this one successfully deploys in Azure
-# Using the Mamba Solver
+FROM mcr.microsoft.com/devcontainers/python:3.11
 
-FROM continuumio/miniconda3
+RUN apt-get update && \
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+    bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda && \
+    rm Miniconda3-latest-Linux-x86_64.sh && \
+    apt-get clean
 
+ENV PATH /opt/conda/bin:$PATH
 WORKDIR /app
+COPY biomni_env/environment.yml .
 
-# Copy the environment file
-COPY biomni_env/environment.yml ./environment.yml
-
-# 1. Install the mamba solver from conda-forge.
-# 2. Set the solver to mamba permanently.
-# 3. Configure the correct channel priority permanently.
-RUN conda install -n base conda-libmamba-solver -c conda-forge -y && \
-    conda config --set solver libmamba && \
-    conda config --add channels defaults && \
-    conda config --add channels bioconda && \
-    conda config --add channels conda-forge
-
-# Create the entire environment from the file.
-# Mamba will handle the complex dependencies more efficiently.
 RUN conda env create -f environment.yml
 
 RUN conda clean -a -y && echo "Conda cache cleaned."
 
-# Copy application files
+SHELL ["conda", "run", "-n", "biomni_e1", "/bin/bash", "-c"]
 COPY app ./app
 COPY start.sh ./start.sh
 RUN chmod +x ./start.sh
 
-# Expose the port
 EXPOSE 7860
-
-# Default command
 CMD ["./start.sh"]
