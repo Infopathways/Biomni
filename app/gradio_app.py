@@ -56,7 +56,7 @@ def main(host: str, port: int):
     iface.queue()
 
     print(f"Launching Gradio UI on {host}:{port}")
-    iface.launch(server_name=host, server_port=port, share=False, css="style.css")
+    iface.launch(server_name=host, server_port=port, share=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
