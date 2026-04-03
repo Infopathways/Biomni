@@ -17,6 +17,9 @@ COPY biomni_env/environment.yml .
 
 RUN conda env create -f environment.yml
 
+RUN wget -q https://cdn-media.huggingface.co/frpc-gradio-0.2/frpc_linux_amd64 -O /opt/conda/envs/biomni_e1/lib/python3.11/site-packages/gradio/frpc_linux_amd64_v0.2 && \
+    chmod +x /opt/conda/envs/biomni_e1/lib/python3.11/site-packages/gradio/frpc_linux_amd64_v0.2
+
 RUN conda clean -a -y && echo "Conda cache cleaned."
 
 SHELL ["conda", "run", "-n", "biomni_e1", "/bin/bash", "-c"]
