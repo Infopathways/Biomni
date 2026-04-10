@@ -10,6 +10,9 @@ env:
   REGISTRY_LOGIN_SERVER: 'infopathwaysbiomni.azurecr.io'
   IMAGE_NAME: 'biomni-app-v2'
   AZURE_WEBAPP_NAME: 'biomni-app-host'
+  RESOURCE_GROUP: 'Biomni-test' # Define Resource Group once
+  VNET_NAME: 'biomni-vnet'       # Define VNet Name once
+  SUBNET_NAME: 'app-service-subnet' # Define Subnet Name once
 
 jobs:
   build-and-deploy:
@@ -37,9 +40,30 @@ jobs:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
         images: '${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}'
 
-    - name: 'Set Environment Variables via Azure CLI'
+    - name: 'Configure App Service'
       uses: azure/cli@v2
       with:
         inlineScript: |
-          echo "Setting environment variables for ${{ env.AZURE_WEBAPP_NAME }}..."
-          az webapp config appsettings set --resource-group Biomni-test --name ${{ env.AZURE_WEBAPP_NAME }} --settings "OPENAI_API_KEY=${{ secrets.HATZ_API_KEY }}" "OPENAI_API_BASE=https://proxy.hatz.ai/v1" "WEBSITES_CONTAINER_START_TIME_LIMIT=1800" "WEBSOCKETS_ENABLED=true"
+          echo "Step 1: Create VNet and Subnet (will be skipped if they exist)"
+          az network vnet create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.VNET_NAME }} \
+            --address-prefix 10.0.0.0/16 \
+            --subnet-name ${{ env.SUBNET_NAME }} \
+            --subnet-prefix 10.0.0.0/24
+
+          echo "Step 2: Integrate App Service with VNet for outbound traffic"
+          az webapp vnet-integration add \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --vnet ${{ env.VNET_NAME }} \
+            --subnet ${{ env.SUBNET_NAME }}
+
+          echo "Step 3: Set Final App Settings"
+          az webapp config appsettings set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --settings "OPENAI_API_KEY=${{ secrets.HATZ_API_KEY }}" "OPENAI_API_BASE=https://proxy.hatz.ai/v1" "WEBSITES_CONTAINER_START_TIME_LIMIT=1800" "WEBSOCKETS_ENABLED=true"
+          
+          echo "Step 4: Enable Always On"
+          az webapp config set --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --always-on true
