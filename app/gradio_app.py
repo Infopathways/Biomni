@@ -40,7 +40,12 @@ def respond(message, history):
         return f"An error occurred within the agent: {e}"
 
 def main(host: str, port: int):
-    print("--- Using gr.ChatInterface to avoid Blocks bug ---")
+    theme = gr.themes.Default(
+        primary_hue="orange" 
+    ).set(
+        button_primary_background_fill="#ff8800",
+        button_primary_text_color="white"
+    )
     
     iface = gr.ChatInterface(
         fn=respond,
@@ -51,6 +56,11 @@ def main(host: str, port: int):
             "Show me the protein expression for TP53.",
             "What is the function of the BRCA1 gene?"
         ],
+        theme=theme,
+        examples=None,
+        retry_btn=None, 
+        undo_btn=None,  
+        clear_btn=None
     )
 
     iface.queue()
