@@ -11,8 +11,6 @@ env:
   IMAGE_NAME: 'biomni-app-v2'
   AZURE_WEBAPP_NAME: 'biomni-app-host'
   RESOURCE_GROUP: 'Biomni-test'
-  VNET_NAME: 'biomni-vnet'
-  SUBNET_NAME: 'app-service-subnet'
 
 jobs:
   build-and-deploy:
@@ -40,27 +38,13 @@ jobs:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
         images: '${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}'
 
-    - name: 'Configure App Service'
+    - name: 'Set Final App Settings'
       uses: azure/cli@v2
       with:
         inlineScript: |
-          echo "Step 1: Create VNet and Subnet"
-          az network vnet create --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.VNET_NAME }} --address-prefix 10.0.0.0/16 --subnet-name ${{ env.SUBNET_NAME }} --subnet-prefix 10.0.0.0/24
-
-          echo "Step 2: Grant Networking Permissions to the Service Principal"
-          # This is the new, correct command. It finds the service principal by its unique ID.
-          SP_OBJECT_ID=$(az ad sp show --id "${{ secrets.AZURE_CLIENT_ID }}" --query "id" --output tsv)
-          VNET_ID=$(az network vnet show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.VNET_NAME }} --query id --output tsv)
-          
-          # This command will now succeed because $SP_OBJECT_ID will have the correct value.
-          az role assignment create --assignee $SP_OBJECT_ID --role "Network Contributor" --scope $VNET_ID
-
-          echo "Waiting for role assignment to propagate..."
-          sleep 30
-
-          echo "Step 3: Integrate App Service with VNet"
-          az webapp vnet-integration add --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --vnet ${{ env.VNET_NAME }} --subnet ${{ env.SUBNET_NAME }}
-
-          echo "Step 4: Set Final App Settings and Enable Always On"
+          echo "Setting App Configuration..."
           az webapp config set --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --always-on true
-          az webapp config appsettings set --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --settings "OPENAI_API_KEY=${{ secrets.HATZ_API_KEY }}" "OPENAI_API_BASE=https://proxy.hatz.ai/v1" "WEBSITES_CONTAINER_START_TIME_LIMIT=1800" "WEBSOCKETS_ENABLED=true"
+          az webapp config appsettings set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --settings "OPENAI_API_KEY=${{ secrets.HATZ_API_KEY }}" "OPENAI_API_BASE=https://proxy.hatz.ai/v1" "WEBSITES_CONTAINER_START_TIME_LIMIT=1800" "WEBSOCKETS_ENABLED=true"
