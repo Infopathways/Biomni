@@ -28,4 +28,4 @@ COPY start.sh ./start.sh
 RUN chmod +x ./start.sh
 
 EXPOSE 7860
-CMD ["./start.sh"]
+CMD /bin/bash -c "python -m app.gradio_app > /home/log.txt 2>&1"
