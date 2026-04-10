@@ -10,9 +10,9 @@ env:
   REGISTRY_LOGIN_SERVER: 'infopathwaysbiomni.azurecr.io'
   IMAGE_NAME: 'biomni-app-v2'
   AZURE_WEBAPP_NAME: 'biomni-app-host'
-  RESOURCE_GROUP: 'Biomni-test' # Define Resource Group once
-  VNET_NAME: 'biomni-vnet'       # Define VNet Name once
-  SUBNET_NAME: 'app-service-subnet' # Define Subnet Name once
+  RESOURCE_GROUP: 'Biomni-test'
+  VNET_NAME: 'biomni-vnet'
+  SUBNET_NAME: 'app-service-subnet'
 
 jobs:
   build-and-deploy:
@@ -44,7 +44,7 @@ jobs:
       uses: azure/cli@v2
       with:
         inlineScript: |
-          echo "Step 1: Create VNet and Subnet (will be skipped if they exist)"
+          echo "Step 1: Create VNet and Subnet"
           az network vnet create \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --name ${{ env.VNET_NAME }} \
@@ -52,18 +52,32 @@ jobs:
             --subnet-name ${{ env.SUBNET_NAME }} \
             --subnet-prefix 10.0.0.0/24
 
-          echo "Step 2: Integrate App Service with VNet for outbound traffic"
+          echo "Step 2: Grant Networking Permissions to the Service Principal"
+          # Get the ID of the logged-in Service Principal
+          SP_ID=$(az ad sp list --display-name ${{ secrets.AZURE_CLIENT_ID }} --query '[0].id' --output tsv)
+          
+          # Get the full resource ID of the VNet
+          VNET_ID=$(az network vnet show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.VNET_NAME }} --query id --output tsv)
+          
+          # Assign the 'Network Contributor' role to the Service Principal for the VNet
+          az role assignment create \
+            --assignee $SP_ID \
+            --role "Network Contributor" \
+            --scope $VNET_ID
+          sleep 30
+
+          echo "Step 3: Integrate App Service with VNet"
           az webapp vnet-integration add \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --vnet ${{ env.VNET_NAME }} \
             --subnet ${{ env.SUBNET_NAME }}
 
-          echo "Step 3: Set Final App Settings"
+          echo "Step 4: Set Final App Settings"
           az webapp config appsettings set \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --settings "OPENAI_API_KEY=${{ secrets.HATZ_API_KEY }}" "OPENAI_API_BASE=https://proxy.hatz.ai/v1" "WEBSITES_CONTAINER_START_TIME_LIMIT=1800" "WEBSOCKETS_ENABLED=true"
           
-          echo "Step 4: Enable Always On"
+          echo "Step 5: Enable Always On"
           az webapp config set --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --always-on true
