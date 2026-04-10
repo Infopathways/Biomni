@@ -48,11 +48,12 @@ jobs:
           az network vnet create --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.VNET_NAME }} --address-prefix 10.0.0.0/16 --subnet-name ${{ env.SUBNET_NAME }} --subnet-prefix 10.0.0.0/24
 
           echo "Step 2: Grant Networking Permissions to the Service Principal"
-          # This command will now succeed because the secret is set
-          SP_ID=$(az ad sp list --display-name "${{ secrets.AZURE_CLIENT_ID }}" --query "[0].objectId" --output tsv)
+          # This is the new, correct command. It finds the service principal by its unique ID.
+          SP_OBJECT_ID=$(az ad sp show --id "${{ secrets.AZURE_CLIENT_ID }}" --query "id" --output tsv)
           VNET_ID=$(az network vnet show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.VNET_NAME }} --query id --output tsv)
           
-          az role assignment create --assignee $SP_ID --role "Network Contributor" --scope $VNET_ID
+          # This command will now succeed because $SP_OBJECT_ID will have the correct value.
+          az role assignment create --assignee $SP_OBJECT_ID --role "Network Contributor" --scope $VNET_ID
 
           echo "Waiting for role assignment to propagate..."
           sleep 30
