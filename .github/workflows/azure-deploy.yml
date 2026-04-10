@@ -38,14 +38,14 @@ jobs:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
         images: '${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}'
 
-    - name: 'Configure App Service'
-      uses: azure/cli@v2
-      with:
+     - name: 'Configure App Service'
+       uses: azure/cli@v2
+       with:
         inlineScript: |
-          echo "Setting Final App Configuration..."
+          echo "Setting Base App Configuration..."
           az webapp config set --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --always-on true
           
           az webapp config appsettings set \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --settings "OPENAI_API_KEY=${{ secrets.HATZ_API_KEY }}" "OPENAI_API_BASE=https://proxy.hatz.ai/v1" "WEBSITES_CONTAINER_START_TIME_LIMIT=1800" "WEBSOCKETS_ENABLED=true" "WEBSITE_VNET_ROUTE_ALL=1"
+            --settings "OPENAI_API_KEY=${{ secrets.HATZ_API_KEY }}" "OPENAI_API_BASE=https://proxy.hatz.ai/v1" "WEBSITES_CONTAINER_START_TIME_LIMIT=1800" "WEBSOCKETS_ENABLED=true"
