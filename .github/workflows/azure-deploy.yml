@@ -22,7 +22,6 @@ jobs:
       uses: actions/checkout@v4
 
     - name: 'Login to Azure'
-      id: login # Give the login step an ID so we can reference its output
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
@@ -46,37 +45,21 @@ jobs:
       with:
         inlineScript: |
           echo "Step 1: Create VNet and Subnet"
-          az network vnet create \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.VNET_NAME }} \
-            --address-prefix 10.0.0.0/16 \
-            --subnet-name ${{ env.SUBNET_NAME }} \
-            --subnet-prefix 10.0.0.0/24
+          az network vnet create --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.VNET_NAME }} --address-prefix 10.0.0.0/16 --subnet-name ${{ env.SUBNET_NAME }} --subnet-prefix 10.0.0.0/24
 
           echo "Step 2: Grant Networking Permissions to the Service Principal"
-          # This is the new, more reliable way to get the Service Principal ID
-          SP_ID=${{ fromJson(steps.login.outputs.credentials).servicePrincipalId }}
-          
+          # This command will now succeed because the secret is set
+          SP_ID=$(az ad sp list --display-name "${{ secrets.AZURE_CLIENT_ID }}" --query "[0].objectId" --output tsv)
           VNET_ID=$(az network vnet show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.VNET_NAME }} --query id --output tsv)
           
-          az role assignment create \
-            --assignee $SP_ID \
-            --role "Network Contributor" \
-            --scope $VNET_ID
+          az role assignment create --assignee $SP_ID --role "Network Contributor" --scope $VNET_ID
 
           echo "Waiting for role assignment to propagate..."
           sleep 30
 
           echo "Step 3: Integrate App Service with VNet"
-          az webapp vnet-integration add \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --vnet ${{ env.VNET_NAME }} \
-            --subnet ${{ env.SUBNET_NAME }}
+          az webapp vnet-integration add --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --vnet ${{ env.VNET_NAME }} --subnet ${{ env.SUBNET_NAME }}
 
           echo "Step 4: Set Final App Settings and Enable Always On"
           az webapp config set --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --always-on true
-          az webapp config appsettings set \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --settings "OPENAI_API_KEY=${{ secrets.HATZ_API_KEY }}" "OPENAI_API_BASE=https://proxy.hatz.ai/v1" "WEBSITES_CONTAINER_START_TIME_LIMIT=1800" "WEBSOCKETS_ENABLED=true"
+          az webapp config appsettings set --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --settings "OPENAI_API_KEY=${{ secrets.HATZ_API_KEY }}" "OPENAI_API_BASE=https://proxy.hatz.ai/v1" "WEBSITES_CONTAINER_START_TIME_LIMIT=1800" "WEBSOCKETS_ENABLED=true"
