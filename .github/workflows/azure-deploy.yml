@@ -29,6 +29,10 @@ jobs:
 
     - name: 'Build and push image to Azure Container Registry'
       run: |
+        # This line automatically reverts the Dockerfile to its original state
+        sed -i 's|CMD /bin/bash -c "python -m app.gradio_app > /home/log.txt 2>&1"|CMD ["python", "-m", "app.gradio_app"]|' Dockerfile.hybrid
+        
+        # This builds and pushes the image as before
         docker build --no-cache . -f Dockerfile.hybrid -t ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
         docker push ${{ env.REGISTRY_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
@@ -42,10 +46,11 @@ jobs:
       uses: azure/cli@v2
       with:
         inlineScript: |
-          echo "Setting Base App Configuration..."
+          echo "Setting Final App Configuration..."
           az webapp config set --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --always-on true
           
+          # This is the updated settings command with the health check fix
           az webapp config appsettings set \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --settings "OPENAI_API_KEY=${{ secrets.HATZ_API_KEY }}" "OPENAI_API_BASE=https://proxy.hatz.ai/v1" "WEBSITES_CONTAINER_START_TIME_LIMIT=1800" "WEBSOCKETS_ENABLED=true"
+            --settings "OPENAI_API_KEY=${{ secrets.HATZ_API_KEY }}" "OPENAI_API_BASE=https://proxy.hatz.ai/v1" "WEBSITES_CONTAINER_START_TIME_LIMIT=1800" "WEBSOCKETS_ENABLED=true" "WEBSITE_VNET_ROUTE_ALL=1" "WEBSITES_PORT=7860" "WEBSITES_HEALTH_CHECK_URL=http://localhost:7860/health_check"
