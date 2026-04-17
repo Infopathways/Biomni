@@ -57,7 +57,6 @@ def main(host: str, port: int):
             "What is the function of the BRCA1 gene?"
         ],
         theme=theme,
-        examples=None,
         retry_btn=None, 
         undo_btn=None,  
         clear_btn=None
