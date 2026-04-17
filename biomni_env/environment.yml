@@ -41,4 +41,3 @@ dependencies:
       - mcp
       - tooluniverse
       - python-dotenv
-      - biomni
