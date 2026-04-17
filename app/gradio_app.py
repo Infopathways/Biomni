@@ -24,24 +24,18 @@ try:
     print("Successfully initialized Biomni agent.")
 
 except Exception as e:
-    # If an error occurs, save the detailed traceback to our variable.
     STARTUP_ERROR_MESSAGE = traceback.format_exc()
     
     agent_instance = None
     AGENT_AVAILABLE = False
     print("--- FATAL: FAILED TO INITIALIZE BIOMNI AGENT ON STARTUP ---")
-    # We still print it to the logs, just in case.
     print(STARTUP_ERROR_MESSAGE)
-    # We NO LONGER exit the app. This is key. The app will run in a "degraded" state.
 
 
 def respond(message, history):
-    # Now, the first thing we do is check if there was a startup error.
     if STARTUP_ERROR_MESSAGE:
-        # If there was an error, we return it directly to the UI.
         return f"FATAL STARTUP ERROR:\n\n{STARTUP_ERROR_MESSAGE}"
 
-    # This part remains the same.
     if not AGENT_AVAILABLE or agent_instance is None:
         return "ERROR: The Biomni agent is not available for an unknown reason."
     if not message:
