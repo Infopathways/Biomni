@@ -44,7 +44,10 @@ def respond(message, history):
                 final_response = chunk["output"]
         return final_response
     except Exception as e:
-        return f"An error occurred within the agent: {e}"
+        print("\nERROR DURING AGENT REQUEST")
+        traceback.print_exc()
+        detailed_error_message = traceback.format_exc()
+        return f"An error occurred within the agent:\n\n{detailed_error_message}"
 
 def main(host: str, port: int):
     theme = gr.themes.Default(primary_hue="orange").set(
