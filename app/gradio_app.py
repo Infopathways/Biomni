@@ -1,7 +1,11 @@
+
 import os
 import argparse
 import traceback
 import gradio as gr
+import sys
+
+STARTUP_ERROR_MESSAGE = None 
 
 try:
     from biomni.agent.a1 import A1
@@ -18,15 +22,28 @@ try:
     )
     AGENT_AVAILABLE = True
     print("Successfully initialized Biomni agent.")
+
 except Exception as e:
+    # If an error occurs, save the detailed traceback to our variable.
+    STARTUP_ERROR_MESSAGE = traceback.format_exc()
+    
     agent_instance = None
     AGENT_AVAILABLE = False
     print("--- FATAL: FAILED TO INITIALIZE BIOMNI AGENT ON STARTUP ---")
-    traceback.print_exc()
+    # We still print it to the logs, just in case.
+    print(STARTUP_ERROR_MESSAGE)
+    # We NO LONGER exit the app. This is key. The app will run in a "degraded" state.
+
 
 def respond(message, history):
+    # Now, the first thing we do is check if there was a startup error.
+    if STARTUP_ERROR_MESSAGE:
+        # If there was an error, we return it directly to the UI.
+        return f"FATAL STARTUP ERROR:\n\n{STARTUP_ERROR_MESSAGE}"
+
+    # This part remains the same.
     if not AGENT_AVAILABLE or agent_instance is None:
-        return "ERROR: The Biomni agent is not available. Please check the application logs for the startup failure reason."
+        return "ERROR: The Biomni agent is not available for an unknown reason."
     if not message:
         return "(empty)"
     try:
@@ -36,36 +53,32 @@ def respond(message, history):
                 final_response = chunk["output"]
         return final_response
     except Exception as e:
-        # Return the error message to be displayed in the chat.
         return f"An error occurred within the agent: {e}"
+
 
 def main(host: str, port: int):
     theme = gr.themes.Default(
         primary_hue="orange" 
     ).set(
         button_primary_background_fill="#ff8800",
+        button_primary_background_fill_hover="#e67a00",
         button_primary_text_color="white"
     )
     
     iface = gr.ChatInterface(
         fn=respond,
-        title="Biomni Agent",
+        title="Biomni AI Assistant",
         description="A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.",
-        examples=[
-            "What genes are associated with Alzheimer's disease?",
-            "Show me the protein expression for TP53.",
-            "What is the function of the BRCA1 gene?"
-        ],
         theme=theme,
-        retry_btn=None, 
-        undo_btn=None,  
+        examples=None,
+        retry_btn=None,
+        undo_btn=None,
         clear_btn=None
     )
 
     iface.queue()
-
     print(f"Launching Gradio UI on {host}:{port}")
-    iface.launch(server_name=host, server_port=port, share=True)
+    iface.launch(server_name=host, server_port=port, share=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
