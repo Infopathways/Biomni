@@ -3,16 +3,36 @@ import argparse
 import traceback
 import gradio as gr
 import sys
+import socket
+
+# === DNS DIAGNOSTIC ===
+print("=== DNS DIAGNOSTIC ===")
+try:
+    result = socket.getaddrinfo("proxy.hatz.ai", 443)
+    print(f"DNS OK: proxy.hatz.ai resolves to {result[0][4][0]}")
+except Exception as e:
+    print(f"DNS FAILED: {e}")
+
+print(f"OPENAI_API_BASE: {os.getenv('OPENAI_API_BASE')}")
+print(f"OPENAI_API_TYPE: {os.getenv('OPENAI_API_TYPE')}")
+
+try:
+    import urllib.request
+    urllib.request.urlopen("https://proxy.hatz.ai/v1", timeout=5)
+    print("HTTP CONNECT OK: proxy.hatz.ai is reachable")
+except Exception as e:
+    print(f"HTTP CONNECT FAILED: {e}")
+
+print("=== END DIAGNOSTIC ===")
+# === END DNS DIAGNOSTIC ===
 
 STARTUP_ERROR_MESSAGE = None 
-
 try:
     from biomni.agent.a1 import A1
     print("Initializing Biomni agent on startup...")
     HATZ_API_KEY = os.environ.get("HATZ_API_KEY")
     if not HATZ_API_KEY:
         raise ValueError("ERROR: HATZ_API_KEY not found.")
-
     agent_instance = A1(
         llm='gpt-4-turbo', 
         api_key=HATZ_API_KEY,  
@@ -21,7 +41,6 @@ try:
     )
     AGENT_AVAILABLE = True
     print("Successfully initialized Biomni agent.")
-
 except Exception as e:
     STARTUP_ERROR_MESSAGE = traceback.format_exc()
     agent_instance = None
@@ -32,7 +51,6 @@ except Exception as e:
 def respond(message, history):
     if STARTUP_ERROR_MESSAGE:
         return f"ERROR:\n\n{STARTUP_ERROR_MESSAGE}"
-
     if not AGENT_AVAILABLE or agent_instance is None:
         return "ERROR: The Biomni agent is not available for an unknown reason."
     if not message:
