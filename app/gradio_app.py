@@ -8,8 +8,8 @@ import socket
 # === DNS DIAGNOSTIC ===
 print("=== DNS DIAGNOSTIC ===")
 try:
-    result = socket.getaddrinfo("proxy.hatz.ai", 443)
-    print(f"DNS OK: proxy.hatz.ai resolves to {result[0][4][0]}")
+    result = socket.getaddrinfo("https://ai.hatz.ai/v1", 443)
+    print(f"DNS OK: https://ai.hatz.ai/v1 resolves to {result[0][4][0]}")
 except Exception as e:
     print(f"DNS FAILED: {e}")
 
@@ -18,8 +18,8 @@ print(f"OPENAI_API_TYPE: {os.getenv('OPENAI_API_TYPE')}")
 
 try:
     import urllib.request
-    urllib.request.urlopen("https://proxy.hatz.ai/v1", timeout=5)
-    print("HTTP CONNECT OK: proxy.hatz.ai is reachable")
+    urllib.request.urlopen("https://ai.hatz.ai/v1", timeout=5)
+    print("HTTP CONNECT OK: https://ai.hatz.ai/v1 is reachable")
 except Exception as e:
     print(f"HTTP CONNECT FAILED: {e}")
 
@@ -36,7 +36,7 @@ try:
     agent_instance = A1(
         llm='gpt-4-turbo', 
         api_key=HATZ_API_KEY,  
-        base_url="https://proxy.hatz.ai/v1",
+        base_url="https://ai.hatz.ai/v1",
         timeout_seconds=600
     )
     AGENT_AVAILABLE = True
