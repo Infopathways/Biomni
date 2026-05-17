@@ -36,7 +36,7 @@ STARTUP_ERROR_MESSAGE = None
 try:
     from biomni.agent.a1 import A1
     print("Initializing Biomni agent on startup...")
-    HATZ_API_KEY = os.environ.get("e54a8774-0459-496b-81fe-0d060254f206")
+    HATZ_API_KEY = os.environ.get("HATZ_API_KEY")
     if not HATZ_API_KEY:
         raise ValueError("ERROR: HATZ_API_KEY not found.")
     agent_instance = A1(
