@@ -5,6 +5,12 @@ import gradio as gr
 import sys
 import socket
 
+# Force correct OpenAI client settings before any imports
+# This prevents LangChain from picking up incorrect env vars
+os.environ["OPENAI_API_TYPE"] = "openai"
+os.environ["OPENAI_API_BASE"] = "https://ai.hatz.ai/v1"
+os.environ["OPENAI_BASE_URL"] = "https://ai.hatz.ai/v1"
+
 # === DNS DIAGNOSTIC ===
 print("=== DNS DIAGNOSTIC ===")
 try:
