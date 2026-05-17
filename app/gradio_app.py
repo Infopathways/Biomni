@@ -6,7 +6,6 @@ import sys
 import socket
 
 # Force correct OpenAI client settings before any imports
-# This prevents LangChain from picking up incorrect env vars
 os.environ["OPENAI_API_TYPE"] = "openai"
 os.environ["OPENAI_API_BASE"] = "https://ai.hatz.ai/v1"
 os.environ["OPENAI_BASE_URL"] = "https://ai.hatz.ai/v1"
@@ -14,8 +13,8 @@ os.environ["OPENAI_BASE_URL"] = "https://ai.hatz.ai/v1"
 # === DNS DIAGNOSTIC ===
 print("=== DNS DIAGNOSTIC ===")
 try:
-    result = socket.getaddrinfo("https://ai.hatz.ai/v1", 443)
-    print(f"DNS OK: https://ai.hatz.ai/v1 resolves to {result[0][4][0]}")
+    result = socket.getaddrinfo("ai.hatz.ai", 443)
+    print(f"DNS OK: ai.hatz.ai resolves to {result[0][4][0]}")
 except Exception as e:
     print(f"DNS FAILED: {e}")
 
@@ -25,26 +24,36 @@ print(f"OPENAI_API_TYPE: {os.getenv('OPENAI_API_TYPE')}")
 try:
     import urllib.request
     urllib.request.urlopen("https://ai.hatz.ai/v1", timeout=5)
-    print("HTTP CONNECT OK: https://ai.hatz.ai/v1 is reachable")
+    print("HTTP CONNECT OK: ai.hatz.ai is reachable")
 except Exception as e:
     print(f"HTTP CONNECT FAILED: {e}")
 
 print("=== END DIAGNOSTIC ===")
 # === END DNS DIAGNOSTIC ===
 
-STARTUP_ERROR_MESSAGE = None 
+STARTUP_ERROR_MESSAGE = None
 try:
     from biomni.agent.a1 import A1
+    import openai
+
     print("Initializing Biomni agent on startup...")
     HATZ_API_KEY = os.environ.get("HATZ_API_KEY")
     if not HATZ_API_KEY:
         raise ValueError("ERROR: HATZ_API_KEY not found.")
+
+    # Patch the OpenAI client to use X-API-Key header
+    original_init = openai.OpenAI.__init__
+    def patched_init(self, *args, **kwargs):
+        kwargs.setdefault("default_headers", {})
+        kwargs["default_headers"]["X-API-Key"] = HATZ_API_KEY
+        original_init(self, *args, **kwargs)
+    openai.OpenAI.__init__ = patched_init
+
     agent_instance = A1(
         llm='gpt-4o',
         api_key=HATZ_API_KEY,
         base_url="https://ai.hatz.ai/v1",
-        timeout_seconds=600,
-        default_headers={"X-API-Key": HATZ_API_KEY}
+        timeout_seconds=600
     )
     AGENT_AVAILABLE = True
     print("Successfully initialized Biomni agent.")
