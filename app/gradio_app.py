@@ -36,14 +36,15 @@ STARTUP_ERROR_MESSAGE = None
 try:
     from biomni.agent.a1 import A1
     print("Initializing Biomni agent on startup...")
-    HATZ_API_KEY = os.environ.get("HATZ_API_KEY")
+    HATZ_API_KEY = os.environ.get("e54a8774-0459-496b-81fe-0d060254f206")
     if not HATZ_API_KEY:
         raise ValueError("ERROR: HATZ_API_KEY not found.")
     agent_instance = A1(
-        llm='gpt-4-turbo', 
-        api_key=HATZ_API_KEY,  
+        llm='gpt-4o',
+        api_key=HATZ_API_KEY,
         base_url="https://ai.hatz.ai/v1",
-        timeout_seconds=600
+        timeout_seconds=600,
+        default_headers={"X-API-Key": HATZ_API_KEY}
     )
     AGENT_AVAILABLE = True
     print("Successfully initialized Biomni agent.")
