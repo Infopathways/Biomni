@@ -4,6 +4,7 @@ import traceback
 import gradio as gr
 import sys
 import socket
+import re
 
 # Force correct OpenAI client settings before any imports
 os.environ["OPENAI_API_TYPE"] = "openai"
@@ -17,19 +18,15 @@ try:
     print(f"DNS OK: ai.hatz.ai resolves to {result[0][4][0]}")
 except Exception as e:
     print(f"DNS FAILED: {e}")
-
 print(f"OPENAI_API_BASE: {os.getenv('OPENAI_API_BASE')}")
 print(f"OPENAI_API_TYPE: {os.getenv('OPENAI_API_TYPE')}")
-
 try:
     import urllib.request
     urllib.request.urlopen("https://ai.hatz.ai/v1", timeout=5)
     print("HTTP CONNECT OK: ai.hatz.ai is reachable")
 except Exception as e:
     print(f"HTTP CONNECT FAILED: {e}")
-
 print("=== END DIAGNOSTIC ===")
-# === END DNS DIAGNOSTIC ===
 
 STARTUP_ERROR_MESSAGE = None
 try:
@@ -41,7 +38,6 @@ try:
     if not HATZ_API_KEY:
         raise ValueError("ERROR: HATZ_API_KEY not found.")
 
-    # Patch the OpenAI client to use X-API-Key header
     original_init = openai.OpenAI.__init__
     def patched_init(self, *args, **kwargs):
         existing = kwargs.get("default_headers") or {}
@@ -65,6 +61,22 @@ except Exception as e:
     print("FAILED TO INITIALIZE BIOMNI AGENT ON STARTUP")
     print(STARTUP_ERROR_MESSAGE)
 
+def clean_response(text):
+    # If there are multiple paragraphs/sections, take only the last meaningful one
+    # Remove AI message headers
+    text = re.sub(r'={5,}.*?={5,}\n?', '', text)
+    # Remove tag wrappers
+    text = re.sub(r'</?solution>', '', text)
+    # Remove thinking/reasoning preambles - match until double newline
+    text = re.sub(r'^(My thinking|Thinking Process|Reasoning|I understand the instruction[^:]*):.*?\n\n', '', text, flags=re.DOTALL | re.MULTILINE)
+    # Remove lines that start with "I understand" or "I see you"
+    text = re.sub(r'^(I understand|I see you|I will comply|I need to include|I\'ll follow).*?\n', '', text, flags=re.MULTILINE)
+    # Remove numbered preamble lines like "1. Ask what biomedical..."
+    text = re.sub(r'^\d+\.\s+Ask.*?\n', '', text, flags=re.MULTILINE)
+    # Clean up extra blank lines
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
 def respond(message, history):
     if STARTUP_ERROR_MESSAGE:
         return f"ERROR:\n\n{STARTUP_ERROR_MESSAGE}"
@@ -74,28 +86,25 @@ def respond(message, history):
         return "(empty)"
     try:
         final_response = "Agent did not return a response."
+        all_chunks = []
         for chunk in agent_instance.go_stream(message):
+            print(f"CHUNK KEYS: {chunk.keys()} | output: {chunk.get('output', '')[:100]}")
             if "output" in chunk and isinstance(chunk["output"], str):
                 final_response = chunk["output"]
+                all_chunks.append(chunk["output"])
         
-        # Clean up internal reasoning/thinking text
-        import re
-        # Remove "My thinking:..." or "Thinking Process:..." blocks
-        final_response = re.sub(r'(My thinking|Thinking Process|Reasoning):.*?(?=\n\n|\Z)', '', final_response, flags=re.DOTALL)
-        # Remove == Ai Message == headers
-        final_response = re.sub(r'={10,}.*?={10,}\n?', '', final_response)
-        # Remove <solution> and </solution> tags
-        final_response = re.sub(r'</?solution>', '', final_response)
-        # Remove "I understand the instruction..." preambles
-        final_response = re.sub(r'I understand the instruction.*?\n\n', '', final_response, flags=re.DOTALL)
-        
-        final_response = final_response.strip()
+        # Use the last non-empty chunk output as it's most likely the final answer
+        for c in reversed(all_chunks):
+            if c.strip():
+                final_response = c
+                break
+
+        final_response = clean_response(final_response)
         return final_response
     except Exception as e:
         print("\nERROR DURING AGENT REQUEST")
         traceback.print_exc()
-        detailed_error_message = traceback.format_exc()
-        return f"An error occurred within the agent:\n\n{detailed_error_message}"
+        return f"An error occurred within the agent:\n\n{traceback.format_exc()}"
 
 def main(host: str, port: int):
     theme = gr.themes.Default(primary_hue="orange").set(
