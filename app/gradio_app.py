@@ -51,7 +51,7 @@ try:
     openai.OpenAI.__init__ = patched_init
 
     agent_instance = A1(
-        llm='gpt-4o',
+        llm='gpt-4o-mini',
         api_key=HATZ_API_KEY,
         base_url="https://ai.hatz.ai/v1",
         timeout_seconds=600
@@ -77,6 +77,10 @@ def respond(message, history):
         for chunk in agent_instance.go_stream(message):
             if "output" in chunk and isinstance(chunk["output"], str):
                 final_response = chunk["output"]
+        # Clean up thinking process text from output
+        import re
+        final_response = re.sub(r'Thinking Process:.*?(?=\n\n|\Z)', '', final_response, flags=re.DOTALL).strip()
+        final_response = re.sub(r'={10,}.*?={10,}\n', '', final_response, flags=re.DOTALL).strip()
         return final_response
     except Exception as e:
         print("\nERROR DURING AGENT REQUEST")
