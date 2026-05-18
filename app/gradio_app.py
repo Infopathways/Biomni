@@ -77,10 +77,19 @@ def respond(message, history):
         for chunk in agent_instance.go_stream(message):
             if "output" in chunk and isinstance(chunk["output"], str):
                 final_response = chunk["output"]
-        # Clean up thinking process text from output
+        
+        # Clean up internal reasoning/thinking text
         import re
-        final_response = re.sub(r'Thinking Process:.*?(?=\n\n|\Z)', '', final_response, flags=re.DOTALL).strip()
-        final_response = re.sub(r'={10,}.*?={10,}\n', '', final_response, flags=re.DOTALL).strip()
+        # Remove "My thinking:..." or "Thinking Process:..." blocks
+        final_response = re.sub(r'(My thinking|Thinking Process|Reasoning):.*?(?=\n\n|\Z)', '', final_response, flags=re.DOTALL)
+        # Remove == Ai Message == headers
+        final_response = re.sub(r'={10,}.*?={10,}\n?', '', final_response)
+        # Remove <solution> and </solution> tags
+        final_response = re.sub(r'</?solution>', '', final_response)
+        # Remove "I understand the instruction..." preambles
+        final_response = re.sub(r'I understand the instruction.*?\n\n', '', final_response, flags=re.DOTALL)
+        
+        final_response = final_response.strip()
         return final_response
     except Exception as e:
         print("\nERROR DURING AGENT REQUEST")
