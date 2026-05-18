@@ -44,8 +44,9 @@ try:
     # Patch the OpenAI client to use X-API-Key header
     original_init = openai.OpenAI.__init__
     def patched_init(self, *args, **kwargs):
-        kwargs.setdefault("default_headers", {})
-        kwargs["default_headers"]["X-API-Key"] = HATZ_API_KEY
+        existing = kwargs.get("default_headers") or {}
+        existing["X-API-Key"] = HATZ_API_KEY
+        kwargs["default_headers"] = existing
         original_init(self, *args, **kwargs)
     openai.OpenAI.__init__ = patched_init
 
