@@ -51,7 +51,7 @@ try:
     openai.OpenAI.__init__ = patched_init
 
     agent_instance = A1(
-        llm='gpt-4o-mini',
+        llm='anthropic.claude-sonnet-4-6',
         api_key=HATZ_API_KEY,
         base_url="https://ai.hatz.ai/v1",
         timeout_seconds=600
