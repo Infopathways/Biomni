@@ -76,7 +76,7 @@ def clean_response(text):
     # Remove thinking/reasoning preambles - match until double newline
     text = re.sub(r'^(My thinking|Thinking Process|Reasoning|I understand the instruction[^:]*):.*?\n\n', '', text, flags=re.DOTALL | re.MULTILINE)
     # Remove lines that start with "I understand" or "I see you"
-    text = re.sub(r'^(I understand|I see you|I will comply|I need to include|I\'ll follow).*?\n', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^(I understand|I will now|I will provide|I see you|I will comply|I need to include|I\'ll follow).*?\n', '', text, flags=re.MULTILINE)
     # Remove numbered preamble lines like "1. Ask what biomedical..."
     text = re.sub(r'^\d+\.\s+Ask.*?\n', '', text, flags=re.MULTILINE)
     # Clean up extra blank lines
