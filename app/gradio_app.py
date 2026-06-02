@@ -62,9 +62,6 @@ except Exception as e:
     print(STARTUP_ERROR_MESSAGE)
 
 def clean_response(text):
-    escaped_message = re.escape(original_message)
-    text = re.sub(r'^\s*' + escaped_message, '', text, flags=re.IGNORECASE)
-
     # Delete the leaked backend instruction.
     text = re.sub(r'Each response must include thinking process.*?\n', '', text, flags=re.DOTALL)
 
@@ -93,7 +90,7 @@ def respond(message, history):
         return "ERROR: The Biomni agent is not available for an unknown reason."
     if not message:
         return "(empty)"
-     try:
+    try:
         final_response = "Agent did not return a response."
         all_chunks = []
         for chunk in agent_instance.go_stream(message):
@@ -108,7 +105,7 @@ def respond(message, history):
                 final_response = c
                 break
 
-        final_response = clean_response(final_response, message)
+        final_response = clean_response(final_response)
         return final_response
     except Exception as e:
         print("\nERROR DURING AGENT REQUEST")
