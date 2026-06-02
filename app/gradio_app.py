@@ -84,23 +84,20 @@ def respond(message, history):
         return "ERROR: The Biomni agent is not available for an unknown reason."
     if not message:
         return "(empty)"
-    try:
-        final_response = "Agent did not return a response."
-        all_chunks = []
+     try:
+        # Collect all output chunks into a single string.
+        full_raw_output = ""
         for chunk in agent_instance.go_stream(message):
-            print(f"CHUNK KEYS: {chunk.keys()} | output: {chunk.get('output', '')[:100]}")
             if "output" in chunk and isinstance(chunk["output"], str):
-                final_response = chunk["output"]
-                all_chunks.append(chunk["output"])
+                full_raw_output += chunk["output"]
         
-        # Use the last non-empty chunk output as it's most likely the final answer
-        for c in reversed(all_chunks):
-            if c.strip():
-                final_response = c
-                break
+        if not full_raw_output:
+            return "Agent did not return a response."
 
-        final_response = clean_response(final_response)
-        return final_response
+        # Clean the output
+        cleaned_output = clean_response(full_raw_output)
+        
+        return cleaned_output
     except Exception as e:
         print("\nERROR DURING AGENT REQUEST")
         traceback.print_exc()
