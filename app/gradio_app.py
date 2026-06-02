@@ -62,6 +62,15 @@ except Exception as e:
     print(STARTUP_ERROR_MESSAGE)
 
 def clean_response(text):
+    escaped_message = re.escape(original_message)
+    text = re.sub(r'^\s*' + escaped_message, '', text, flags=re.IGNORECASE)
+
+    # Delete the leaked backend instruction.
+    text = re.sub(r'Each response must include thinking process.*?\n', '', text, flags=re.DOTALL)
+
+    # Delete the "Thinking Process" paragraph in its various forms.
+    text = re.sub(r'^(The user asked|To explain|To answer|My thinking|Thinking Process|Reasoning)[\s\S]*?\n\n', '', text, flags=re.IGNORECASE | re.MULTILINE)
+    
     # If there are multiple paragraphs/sections, take only the last meaningful one
     # Remove AI message headers
     text = re.sub(r'={5,}.*?={5,}\n?', '', text)
@@ -99,7 +108,7 @@ def respond(message, history):
                 final_response = c
                 break
 
-        final_response = clean_response(final_response)
+        final_response = clean_response(final_response, message)
         return final_response
     except Exception as e:
         print("\nERROR DURING AGENT REQUEST")
