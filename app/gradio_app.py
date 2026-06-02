@@ -85,18 +85,16 @@ def respond(message, history):
     if not message:
         return "(empty)"
     try:
-        # Process and yield each chunk one by one.
+        full_response = ""
         for chunk in agent_instance.go_stream(message):
-            
-            # Check if the chunk has the 'output' key and it's a string
             if "output" in chunk and isinstance(chunk["output"], str):
-                
-                # Clean the individual chunk before sending it to the UI
-                cleaned_chunk = clean_response(chunk["output"])
-                
-                # Only yield the chunk if it's not empty after cleaning
-                if cleaned_chunk:
-                    yield cleaned_chunk
+                full_response += chunk["output"]
+
+        # After the loop is complete, clean the entire buffered response.
+        cleaned_response = clean_response(full_response)
+
+        # Return the single, clean string. Gradio will display it.
+        return cleaned_response
     except Exception as e:
         print("\nERROR DURING AGENT REQUEST")
         traceback.print_exc()
