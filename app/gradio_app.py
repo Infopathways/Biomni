@@ -66,7 +66,7 @@ def clean_response(text):
     text = re.sub(r'Each response must include thinking process.*?\n', '', text, flags=re.DOTALL)
 
     # Delete the "Thinking Process" paragraph in its various forms.
-    text = re.sub(r'^(The user asked|To explain|To answer|My thinking|Thinking Process|Reasoning)[\s\S]*?\n\n', '', text, flags=re.IGNORECASE | re.MULTILINE)
+    text = re.sub(r'^(The user asked|The user requested|To explain|To answer|My thinking|Thinking Process|Reasoning)[\s\S]*?\n\n', '', text, flags=re.IGNORECASE | re.MULTILINE)
     
     # If there are multiple paragraphs/sections, take only the last meaningful one
     # Remove AI message headers
