@@ -47,7 +47,7 @@ try:
     openai.OpenAI.__init__ = patched_init
 
     agent_instance = A1(
-        llm='gpt-3.5-turbo',
+        llm='gpt-4.1-mini',
         api_key=HATZ_API_KEY,
         base_url="https://ai.hatz.ai/v1",
         timeout_seconds=600
