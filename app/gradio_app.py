@@ -65,25 +65,22 @@ def clean_response(text):
     # 1. Delete the leaked backend instruction.
     text = re.sub(r'Each response must include thinking process.*?\n', '', text, flags=re.DOTALL)
 
-    # 2. THE TRANSITION SPLIT: Look for common phrases the agent uses right before the real answer.
-    # If it finds one of these, it throws away everything before it.
-    transition_regex = r'(Now, I will provide.*?|I will now correct this.*?|Here is the solution:)\s*\n+'
-    parts = re.split(transition_regex, text, flags=re.IGNORECASE)
-    if len(parts) > 1:
-        # If the split worked, the actual answer is the last part of the list.
-        text = parts[-1]
+    # 2. THE TRANSITION SPLIT: Look for common phrases and cut everything BEFORE and INCLUDING them.
+    # We added "Here is the corrected version", "Here is the response", etc.
+    transition_phrases = r'(Now, I will provide.*?|I will now correct this.*?|Here is the (solution|corrected version|response).*?|Below is the.*?)'
+    text = re.sub(r'^[\s\S]*?' + transition_phrases + r':?\s*\n+', '', text, flags=re.IGNORECASE)
 
-    # 3. Remove the new "Plan:" outlines
+    # 3. Remove the "Plan:" outlines and standard preambles
     text = re.sub(r'(?im)^Plan:\s*\n(?:[-*]?\s*.*\n)+', '', text)
-
-    # 4. Remove standard preambles
     text = re.sub(r'^(The user (is asking|asked|requested)|To explain|To answer|My thinking|Thinking Process|Reasoning)[\s\S]*?\n\n', '', text, flags=re.IGNORECASE | re.MULTILINE)
     
-    # 5. General cleanup
+    # 4. General cleanup of leftover headers or conversational filler at the top
     text = re.sub(r'={5,}.*?={5,}\n?', '', text)
     text = re.sub(r'</?solution>', '', text)
-    text = re.sub(r'^(I understand|I will now|I will provide|I see you|I will comply|I need to include|I\'ll follow).*?\n', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^(I understand|I will now|I will provide|I see you|I will comply|I need to include|I\'ll follow).*?\n', '', text, flags=re.IGNORECASE | re.MULTILINE)
     text = re.sub(r'^\d+\.\s+Ask.*?\n', '', text, flags=re.MULTILINE)
+    
+    # 5. Clean up extra blank lines
     text = re.sub(r'\n{3,}', '\n\n', text)
     
     return text.strip()
@@ -103,7 +100,14 @@ def respond(message, history):
         final_response = "Agent did not return a response."
         all_chunks = []
         
-        # STREAMING PHASE: Show the raw text subtly so you know it's working
+        # STREAMING PHASE: Show a clean, animated loading message instead of messy raw text
+        loading_frames = [
+            "Biomni agent is analyzing your request.*",
+            "Biomni agent is analyzing your request..*",
+            "Biomni agent is analyzing your request...*"
+        ]
+        step_idx = 0
+        
         for chunk in agent_instance.go_stream(message):
             print(f"CHUNK KEYS: {chunk.keys()} | output: {chunk.get('output', '')[:100]}")
             if "output" in chunk and isinstance(chunk["output"], str):
@@ -111,8 +115,9 @@ def respond(message, history):
                 final_response = current_text
                 all_chunks.append(current_text)
                 
-                # Yield the intermediate text formatted subtly
-                yield f"Biomni agent is thinking..._\n\n---\n\n_{current_text}_"
+                # Yield the clean loading animation. It will cycle through the dots (...)
+                yield loading_frames[step_idx % 3]
+                step_idx += 1
         
         # Use the last non-empty chunk output as it's most likely the final answer
         for c in reversed(all_chunks):
@@ -123,7 +128,7 @@ def respond(message, history):
         # CLEANUP PHASE: Run our aggressive cleaner on the complete text
         cleaned_text = clean_response(final_response)
 
-        # FINAL YIELD: Overwrite the "thinking" text with the final, clean answer
+        # FINAL YIELD: Overwrite the loading animation with the final, clean answer
         yield cleaned_text
 
     except Exception as e:
