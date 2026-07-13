@@ -11,7 +11,6 @@ os.environ["OPENAI_API_TYPE"] = "openai"
 os.environ["OPENAI_API_BASE"] = "https://ai.hatz.ai/v1"
 os.environ["OPENAI_BASE_URL"] = "https://ai.hatz.ai/v1"
 
-# === DNS DIAGNOSTIC ===
 print("=== DNS DIAGNOSTIC ===")
 try:
     result = socket.getaddrinfo("ai.hatz.ai", 443)
@@ -136,17 +135,131 @@ def main(host: str, port: int):
         button_primary_text_color="white"
     )
 
-    # Read the CSS file contents — Gradio needs the actual CSS text, not a filename
-    css_content = ""
-    css_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "style.css")
-    if not os.path.exists(css_path):
-        css_path = "style.css"
-    try:
-        with open(css_path, "r", encoding="utf-8") as f:
-            css_content = f.read()
-        print(f"Loaded CSS from {css_path} ({len(css_content)} chars)")
-    except Exception as e:
-        print(f"WARNING: Could not load style.css: {e}")
+    css_content = """
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
+    :root {
+        --primary-accent: #ff8800;
+        --secondary-accent: #3662d4;
+        --background-primary: #f1f4f9;
+        --background-card: #ffffff;
+        --text-primary: #4b4b4b;
+        --text-on-accent: #ffffff;
+        --border-color: #e2e8f0;
+    }
+
+    gradio-app, .gradio-container {
+        background-color: var(--background-primary) !important;
+        font-family: 'Montserrat', sans-serif !important;
+    }
+
+    .gradio-container .main-title-wrap, .gradio-container .main-title {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+    }
+
+    .gradio-container .main-title::before {
+        content: "";
+        display: block;
+        width: 80px;
+        height: 80px;
+        margin-bottom: 15px;
+        background-image: url("https://48131155.fs1.hubspotusercontent-na1.net/hubfs/48131155/grey%20logo%20europa.png");
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+
+    .gradio-container .main-title h1 {
+        color: var(--text-primary) !important;
+        font-weight: 700 !important;
+        font-size: 2rem !important;
+    }
+
+    .gradio-container .description {
+        color: #8a8a8a !important;
+        font-size: 0.95rem !important;
+        text-align: center !important;
+    }
+
+    [data-testid="user"] {
+        background-color: var(--primary-accent) !important;
+        color: var(--text-on-accent) !important;
+        border-radius: 12px !important;
+        border: none !important;
+    }
+    [data-testid="user"] p, [data-testid="user"] span, [data-testid="user"] div {
+        color: var(--text-on-accent) !important;
+    }
+
+    [data-testid="assistant"] {
+        background-color: var(--background-card) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 12px !important;
+    }
+    [data-testid="assistant"] p, [data-testid="assistant"] span, [data-testid="assistant"] div {
+        color: var(--text-primary) !important;
+    }
+
+    button.primary {
+        background-color: var(--primary-accent) !important;
+        color: var(--text-on-accent) !important;
+        border: none !important;
+        font-weight: 600 !important;
+        border-radius: 10px !important;
+        transition: background-color 0.2s ease, transform 0.1s ease !important;
+    }
+    button.primary:hover {
+        background-color: var(--secondary-accent) !important;
+        color: var(--text-on-accent) !important;
+    }
+    button.primary:active {
+        transform: scale(0.97) !important;
+    }
+
+    .gradio-textbox textarea {
+        border: 1px solid var(--border-color) !important;
+        border-radius: 8px !important;
+        background-color: var(--background-card) !important;
+        color: var(--text-primary) !important;
+        font-size: 0.95rem !important;
+    }
+    .gradio-textbox textarea:focus {
+        border-color: var(--primary-accent) !important;
+        box-shadow: 0 0 0 2px rgba(255, 136, 0, 0.2) !important;
+    }
+
+    .prose {
+        color: var(--text-primary) !important;
+    }
+    .prose h1, .prose h2, .prose h3 {
+        color: var(--secondary-accent) !important;
+    }
+    .prose a {
+        color: var(--secondary-accent) !important;
+    }
+    .prose a:hover {
+        color: var(--primary-accent) !important;
+    }
+    .prose p {
+        color: var(--text-primary) !important;
+    }
+
+    .prose pre {
+        background-color: #2d2d2d !important;
+        border-radius: 10px !important;
+    }
+    .prose code {
+        color: var(--primary-accent) !important;
+    }
+
+    footer {
+        display: none !important;
+    }
+    """
 
     iface = gr.ChatInterface(
         fn=respond,
