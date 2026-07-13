@@ -66,7 +66,6 @@ def clean_response(text):
     text = re.sub(r'Each response must include thinking process.*?\n', '', text, flags=re.DOTALL)
 
     # 2. THE TRANSITION SPLIT: Look for common phrases and cut everything BEFORE and INCLUDING them.
-    # We added "Here is the corrected version", "Here is the response", etc.
     transition_phrases = r'(Now, I will provide.*?|I will now correct this.*?|Here is the (solution|corrected version|response).*?|Below is the.*?)'
     text = re.sub(r'^[\s\S]*?' + transition_phrases + r':?\s*\n+', '', text, flags=re.IGNORECASE)
 
@@ -100,7 +99,6 @@ def respond(message, history):
         final_response = "Agent did not return a response."
         all_chunks = []
         
-        # STREAMING PHASE: Show a clean, animated loading message instead of messy raw text
         loading_frames = [
             "Biomni agent is analyzing your request.*",
             "Biomni agent is analyzing your request..*",
@@ -115,20 +113,15 @@ def respond(message, history):
                 final_response = current_text
                 all_chunks.append(current_text)
                 
-                # Yield the clean loading animation. It will cycle through the dots (...)
                 yield loading_frames[step_idx % 3]
                 step_idx += 1
         
-        # Use the last non-empty chunk output as it's most likely the final answer
         for c in reversed(all_chunks):
             if c.strip():
                 final_response = c
                 break
 
-        # CLEANUP PHASE: Run our aggressive cleaner on the complete text
         cleaned_text = clean_response(final_response)
-
-        # FINAL YIELD: Overwrite the loading animation with the final, clean answer
         yield cleaned_text
 
     except Exception as e:
@@ -139,15 +132,28 @@ def respond(message, history):
 def main(host: str, port: int):
     theme = gr.themes.Default(primary_hue="orange").set(
         button_primary_background_fill="#ff8800",
-        button_primary_background_fill_hover="#e67a00",
+        button_primary_background_fill_hover="#3662d4",
         button_primary_text_color="white"
     )
+
+    # Read the CSS file contents — Gradio needs the actual CSS text, not a filename
+    css_content = ""
+    css_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "style.css")
+    if not os.path.exists(css_path):
+        css_path = "style.css"
+    try:
+        with open(css_path, "r", encoding="utf-8") as f:
+            css_content = f.read()
+        print(f"Loaded CSS from {css_path} ({len(css_content)} chars)")
+    except Exception as e:
+        print(f"WARNING: Could not load style.css: {e}")
+
     iface = gr.ChatInterface(
         fn=respond,
         title="Biomni AI Agent",
         description="A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.",
         theme=theme,
-        css="style.css",
+        css=css_content,
         examples=None, retry_btn=None, undo_btn=None, clear_btn=None
     )
     iface.queue()
