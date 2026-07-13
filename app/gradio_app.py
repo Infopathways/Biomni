@@ -147,6 +147,7 @@ def main(host: str, port: int):
         title="Biomni AI Agent",
         description="A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.",
         theme=theme,
+        css="style.css",
         examples=None, retry_btn=None, undo_btn=None, clear_btn=None
     )
     iface.queue()
