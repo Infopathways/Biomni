@@ -6,7 +6,6 @@ import sys
 import socket
 import re
 
-# Force correct OpenAI client settings before any imports
 os.environ["OPENAI_API_TYPE"] = "openai"
 os.environ["OPENAI_API_BASE"] = "https://ai.hatz.ai/v1"
 os.environ["OPENAI_BASE_URL"] = "https://ai.hatz.ai/v1"
