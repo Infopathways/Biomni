@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
 :root {
     --primary-accent: #ff8800;
     --secondary-accent: #3662d4;
@@ -11,7 +12,7 @@
 gradio-app,
 .gradio-container {
     background-color: var(--background-primary) !important;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-family: 'Montserrat', sans-serif !important;
 }
 
 .gradio-container .main-title-wrap,
@@ -25,109 +26,53 @@ gradio-app,
 .gradio-container .main-title::before {
     content: "";
     display: block;
-    width: 64px;
-    height: 64px;
-    margin-bottom: 12px;
+    width: 80px;
+    height: 80px;
+    margin-bottom: 15px;
     background-image: url("https://48131155.fs1.hubspotusercontent-na1.net/hubfs/48131155/grey%20logo%20europa.png");
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
 }
 
-.gradio-container .main-title h1,
-.gradio-container .main-title {
+.gradio-container .main-title h1 {
     color: var(--text-primary) !important;
     font-weight: 700 !important;
-    letter-spacing: -0.02em !important;
-}
-
-.gradio-container .description,
-.gradio-container .main-title-wrap .description {
-    color: #8a8a8a !important;
-    font-size: 0.95rem !important;
-    text-align: center !important;
+    font-size: 2rem !important;
 }
 
 [data-testid="user"] {
     background-color: var(--primary-accent) !important;
     color: var(--text-on-accent) !important;
-    border-radius: 14px !important;
-    border: none !important;
-}
-[data-testid="user"] p,
-[data-testid="user"] span,
-[data-testid="user"] div {
-    color: var(--text-on-accent) !important;
+    border-radius: 12px !important;
 }
 
 [data-testid="assistant"] {
     background-color: var(--background-card) !important;
     color: var(--text-primary) !important;
     border: 1px solid var(--border-color) !important;
-    border-radius: 14px !important;
-}
-[data-testid="assistant"] p,
-[data-testid="assistant"] span,
-[data-testid="assistant"] div {
-    color: var(--text-primary) !important;
+    border-radius: 12px !important;
 }
 
-.gradio-button.primary,
 button.primary {
     background-color: var(--primary-accent) !important;
     color: var(--text-on-accent) !important;
     border: none !important;
     font-weight: 600 !important;
-    border-radius: 10px !important;
-    transition: background-color 0.2s ease, transform 0.1s ease !important;
+    transition: all 0.2s ease !important;
 }
-.gradio-button.primary:hover,
+
 button.primary:hover {
     background-color: var(--secondary-accent) !important;
-    color: var(--text-on-accent) !important;
-}
-.gradio-button.primary:active,
-button.primary:active {
-    transform: scale(0.97) !important;
+    transform: translateY(-1px);
 }
 
-.gradio-textbox textarea,
-textarea.scroll-hide {
-    border-radius: 10px !important;
+.gradio-textbox textarea {
     border: 1px solid var(--border-color) !important;
-    background-color: var(--background-card) !important;
-    color: var(--text-primary) !important;
-    font-size: 0.95rem !important;
-}
-.gradio-textbox textarea:focus {
-    border-color: var(--primary-accent) !important;
-    box-shadow: 0 0 0 2px rgba(255, 136, 0, 0.2) !important;
-}
-
-.prose {
-    color: var(--text-primary) !important;
-}
-.prose h1, .prose h2, .prose h3 {
-    color: var(--secondary-accent) !important;
-}
-.prose a {
-    color: var(--secondary-accent) !important;
-}
-.prose a:hover {
-    color: var(--primary-accent) !important;
-}
-.prose p {
+    border-radius: 8px !important;
     color: var(--text-primary) !important;
 }
 
-.prose pre {
-    background-color: #2d2d2d !important;
-    border-radius: 10px !important;
-}
-.prose code {
-    color: var(--primary-accent) !important;
-}
-
-.gradio-container footer {
+footer {
     display: none !important;
 }
