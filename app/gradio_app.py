@@ -282,15 +282,17 @@ def main(host: str, port: int):
     button.stop,
     [data-testid="stop-button"],
     .gradio-button.stop,
-    button[aria-label="Stop"] {
+    button[aria-label="Stop"],
+    .button-container button[aria-label="Stop"],
+    form button[aria-label="Stop"] {
         background-color: #e53e3e !important;
         color: #ffffff !important;
         border: none !important;
         border-radius: 10px !important;
         width: 100% !important;
         height: 100% !important;
-        min-width: unset !important;
-        min-height: unset !important;
+        min-width: 100% !important;
+        min-height: 100% !important;
         padding: 0 !important;
         margin: 0 !important;
         font-size: 0 !important;
@@ -299,26 +301,31 @@ def main(host: str, port: int):
         justify-content: center !important;
         transition: background-color 0.2s ease !important;
         position: relative !important;
+        overflow: hidden !important;
     }
     .stop-button::after,
     button.stop::after,
     [data-testid="stop-button"]::after,
     .gradio-button.stop::after,
-    button[aria-label="Stop"]::after {
+    button[aria-label="Stop"]::after,
+    .button-container button[aria-label="Stop"]::after,
+    form button[aria-label="Stop"]::after {
         content: "✕" !important;
-        font-size: 20px !important;
+        font-size: 24px !important;
         color: #ffffff !important;
         font-weight: bold !important;
         line-height: 1 !important;
+        display: block !important;
     }
     .stop-button:hover,
     button.stop:hover,
     [data-testid="stop-button"]:hover,
     .gradio-button.stop:hover,
-    button[aria-label="Stop"]:hover {
+    button[aria-label="Stop"]:hover,
+    .button-container button[aria-label="Stop"]:hover,
+    form button[aria-label="Stop"]:hover {
         background-color: #c53030 !important;
     }
-
     .gradio-textbox textarea {
         border: 1px solid var(--border-color) !important;
         border-radius: 8px !important;
