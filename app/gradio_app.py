@@ -360,4 +360,4 @@ if __name__ == "__main__":
         default=int(os.environ.get("PORT") or os.environ.get("WEBSITES_PORT") or 7860),
     )
     args = parser.parse_args()
-    main(args.host, args.port) is this correct, it doesnt seem to be changing
+    main(args.host, args.port)
