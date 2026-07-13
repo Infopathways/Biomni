@@ -86,7 +86,23 @@ def clean_response(text):
     text = re.sub(r'</?solution>', '', text, flags=re.IGNORECASE)
     text = re.sub(r'(?i)^\s*(Since this is a direct response|Instead, I should|I realize that)[\s\S]*?\n\n', '', text)
     
-    # 6. Clean up extra blank lines
+    # 6. NEW: Catch the "Now, to align with instructions" pattern and everything before it
+    text = re.sub(r'(?is)^[\s\S]*?(now,?\s+to\s+align\s+with\s+the?\s+instructions?,?\s+I\s+will\s+fix\s+that\s+response\s+by\s+including\s+the?\s+required\s+tags?\.?\s*\n+)', '', text)
+    
+    # 7. Catch any "I greeted" / "I responded" / "you greeted" reasoning preamble
+    text = re.sub(r'(?is)^[\s\S]*?(I\s+(greeted|responded|replied)|You\s+(greeted|responded|said)|Currently,?\s+you\s+greeted)[\s\S]*?\n\n', '', text)
+    
+    # 8. Generic catch-all - if the text starts with reasoning-like preamble, 
+    # find the first line that looks like an actual answer and keep from there
+    # Look for a line that starts with a greeting or direct answer
+    answer_match = re.search(r'(?m)^(Hello!|Hi!|Hey!|Greetings!|Sure!|Of course!|Absolutely!|Yes,?|No,?|The |A |An |I\s+can|Let\s+me|Here\s+is|Here\s+are)', text)
+    if answer_match and answer_match.start() > 0:
+        text = text[answer_match.start():]
+    
+    # 9. Remove any remaining XML-style tags
+    text = re.sub(r'</?\w+>', '', text, flags=re.IGNORECASE)
+    
+    # 10. Clean up extra blank lines
     text = re.sub(r'\n{3,}', '\n\n', text)
     
     return text.strip()
@@ -137,10 +153,16 @@ def respond(message, history):
         yield f"An error occurred within the agent:\n\n{traceback.format_exc()}"
 
 def main(host: str, port: int):
-    theme = gr.themes.Default(primary_hue="orange").set(
+    theme = gr.themes.Default(
+        primary_hue="orange",
+        font=[gr.themes.GoogleFont("Montserrat"), "sans-serif"],
+    ).set(
         button_primary_background_fill="#ff8800",
         button_primary_background_fill_hover="#3662d4",
-        button_primary_text_color="white"
+        button_primary_text_color="white",
+        # Force title color in the theme itself
+        block_title_text_color="#ff8800",
+        block_label_text_color="#ff8800",
     )
 
     css_content = """
@@ -155,6 +177,7 @@ def main(host: str, port: int):
         --text-on-accent: #ffffff;
         --border-color: #e2e8f0;
         --user-bubble-bg: rgba(255, 136, 0, 0.12);
+        --stop-red: #e53e3e;
     }
 
     gradio-app, .gradio-container {
@@ -162,8 +185,16 @@ def main(host: str, port: int):
         font-family: 'Montserrat', sans-serif !important;
     }
 
-    /* Title and header - force orange */
-    .gradio-container .main-title-wrap, .gradio-container .main-title {
+    /* Title - aggressive override */
+    .gradio-container .main-title-wrap,
+    .gradio-container .main-title,
+    .gradio-container h1,
+    .gradio-container .main-title h1,
+    #component-0 h1,
+    .wrap h1 {
+        color: #ff8800 !important;
+        font-weight: 700 !important;
+        font-size: 2rem !important;
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
@@ -180,13 +211,6 @@ def main(host: str, port: int):
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center;
-    }
-
-    .gradio-container .main-title h1,
-    .gradio-container .main-title {
-        color: var(--primary-accent) !important;
-        font-weight: 700 !important;
-        font-size: 2rem !important;
     }
 
     .gradio-container .description {
@@ -215,6 +239,7 @@ def main(host: str, port: int):
         color: var(--text-primary) !important;
     }
 
+    /* Assistant message bubble */
     [data-testid="assistant"] {
         background-color: transparent !important;
         background: transparent !important;
@@ -235,6 +260,7 @@ def main(host: str, port: int):
         color: var(--text-primary) !important;
     }
 
+    /* Send button */
     button.primary {
         background-color: var(--primary-accent) !important;
         color: var(--text-on-accent) !important;
@@ -251,6 +277,42 @@ def main(host: str, port: int):
         transform: scale(0.97) !important;
     }
 
+    /* Stop button - red with white X */
+    .stop-button,
+    button.stop,
+    [data-testid="stop-button"],
+    .gradio-button.stop {
+        background-color: var(--stop-red) !important;
+        color: var(--text-on-accent) !important;
+        border: none !important;
+        border-radius: 50% !important;
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        padding: 0 !important;
+        font-size: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: background-color 0.2s ease !important;
+    }
+    .stop-button::before,
+    button.stop::before,
+    [data-testid="stop-button"]::before,
+    .gradio-button.stop::before {
+        content: "✕" !important;
+        font-size: 18px !important;
+        color: white !important;
+        font-weight: bold !important;
+    }
+    .stop-button:hover,
+    button.stop:hover,
+    [data-testid="stop-button"]:hover,
+    .gradio-button.stop:hover {
+        background-color: #c53030 !important;
+    }
+
+    /* Input Box */
     .gradio-textbox textarea {
         border: 1px solid var(--border-color) !important;
         border-radius: 8px !important;
@@ -263,6 +325,7 @@ def main(host: str, port: int):
         box-shadow: 0 0 0 2px rgba(255, 136, 0, 0.2) !important;
     }
 
+    /* Prose content */
     .prose {
         color: var(--text-primary) !important;
     }
