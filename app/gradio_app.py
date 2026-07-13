@@ -78,7 +78,15 @@ def clean_response(text):
     text = re.sub(r'^(I understand|I will now|I will provide|I see you|I will comply|I need to include|I\'ll follow).*?\n', '', text, flags=re.IGNORECASE | re.MULTILINE)
     text = re.sub(r'^\d+\.\s+Ask.*?\n', '', text, flags=re.MULTILINE)
     
-    # 5. Clean up extra blank lines
+    # 5. Remove leaked reasoning about execute/solution tags and XML tags
+    text = re.sub(r'(?i)(I realize that I mistakenly used a print statement.*?)(?=\n\n|\Z)', '', text, flags=re.DOTALL)
+    text = re.sub(r'(?i)(I should provide the response as text inside the execute tag.*?)(?=\n\n|\Z)', '', text, flags=re.DOTALL)
+    text = re.sub(r'(?i)(it\'?s more appropriate to use the .*? tag.*?)(?=\n\n|\Z)', '', text, flags=re.DOTALL)
+    text = re.sub(r'</?execute>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'</?solution>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'(?i)^\s*(Since this is a direct response|Instead, I should|I realize that)[\s\S]*?\n\n', '', text)
+    
+    # 6. Clean up extra blank lines
     text = re.sub(r'\n{3,}', '\n\n', text)
     
     return text.strip()
@@ -146,6 +154,7 @@ def main(host: str, port: int):
         --text-primary: #4b4b4b;
         --text-on-accent: #ffffff;
         --border-color: #e2e8f0;
+        --user-bubble-bg: rgba(255, 136, 0, 0.12);
     }
 
     gradio-app, .gradio-container {
@@ -153,6 +162,7 @@ def main(host: str, port: int):
         font-family: 'Montserrat', sans-serif !important;
     }
 
+    /* Title and header - force orange */
     .gradio-container .main-title-wrap, .gradio-container .main-title {
         display: flex !important;
         flex-direction: column !important;
@@ -172,8 +182,9 @@ def main(host: str, port: int):
         background-position: center;
     }
 
-    .gradio-container .main-title h1 {
-        color: var(--text-primary) !important;
+    .gradio-container .main-title h1,
+    .gradio-container .main-title {
+        color: var(--primary-accent) !important;
         font-weight: 700 !important;
         font-size: 2rem !important;
     }
@@ -185,22 +196,42 @@ def main(host: str, port: int):
     }
 
     [data-testid="user"] {
-        background-color: var(--primary-accent) !important;
-        color: var(--text-on-accent) !important;
-        border-radius: 12px !important;
+        background-color: transparent !important;
+        background: transparent !important;
         border: none !important;
+        box-shadow: none !important;
     }
-    [data-testid="user"] p, [data-testid="user"] span, [data-testid="user"] div {
-        color: var(--text-on-accent) !important;
+    [data-testid="user"] .message-bubble,
+    [data-testid="user"] .message,
+    [data-testid="user"] .chatbot-user-message {
+        background-color: var(--user-bubble-bg) !important;
+        color: var(--text-primary) !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(255, 136, 0, 0.25) !important;
+    }
+    [data-testid="user"] .message-bubble p,
+    [data-testid="user"] .message-bubble span,
+    [data-testid="user"] .message-bubble div {
+        color: var(--text-primary) !important;
     }
 
     [data-testid="assistant"] {
+        background-color: transparent !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    [data-testid="assistant"] .message-bubble,
+    [data-testid="assistant"] .message,
+    [data-testid="assistant"] .chatbot-bot-message {
         background-color: var(--background-card) !important;
         color: var(--text-primary) !important;
         border: 1px solid var(--border-color) !important;
         border-radius: 12px !important;
     }
-    [data-testid="assistant"] p, [data-testid="assistant"] span, [data-testid="assistant"] div {
+    [data-testid="assistant"] .message-bubble p,
+    [data-testid="assistant"] .message-bubble span,
+    [data-testid="assistant"] .message-bubble div {
         color: var(--text-primary) !important;
     }
 
