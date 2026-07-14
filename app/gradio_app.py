@@ -111,6 +111,14 @@ def clean_response(text):
     text = re.sub(r'(?i)^Here is (my |the )?(clear )?(thinking|reasoning) and reasoning:\s*\n', '', text, flags=re.MULTILINE)
     text = re.sub(r'(?i)^Next, I will (summarize|provide)[\s\S]*?\n', '', text, flags=re.MULTILINE)
     text = re.sub(r'(?i)^Now I will provide (the )?final (complete )?response[\s\S]*?\n', '', text, flags=re.MULTILINE)
+    # 11g. Catch tool/module failure reasoning
+    text = re.sub(r'(?i)^The (module|tool|database|literature|API) (error|failure|problem|issue) persists[\s\S]*?(I will rely on|to answer the question|based on)[\s\S]*?\n\n', '', text)
+
+    # 11h. Catch "Given this repeated failure" pattern
+    text = re.sub(r'(?i)^Given (this|the) (repeated )?(failure|error)[\s\S]*?(I will rely|based on)[\s\S]*?\n\n', '', text)
+
+    # 11i. Catch "I will rely on my knowledge" preamble
+    text = re.sub(r'(?i)^I will (rely on|use) (my )?(biomedical|scientific|domain) knowledge[\s\S]*?(to answer|based on)[\s\S]*?\n\n', '', text)
     
     # 12. Clean up extra blank lines
     text = re.sub(r'\n{3,}', '\n\n', text)
