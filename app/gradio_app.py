@@ -104,6 +104,13 @@ def clean_response(text):
     
     # 11. Remove any remaining XML-style tags
     text = re.sub(r'</?\w+>', '', text, flags=re.IGNORECASE)
+    # 11d. Catch "Here is my clear thinking and reasoning" and everything before the actual answer
+    text = re.sub(r'(?i)^[\s\S]*?(here\s+is\s+(my\s+)?(clear\s+)?think(ing|er)|next,?\s+I\s+will\s+(summarize|provide)|now\s+I\s+will\s+provide\s+(the\s+)?(final\s+)?response)[\s\S]*?(within\s+the\s+tag\.?|below\.?|here\s+is.*?)\.?\s*\n+', '', text)
+
+    # 11e. Catch standalone reasoning lines
+    text = re.sub(r'(?i)^Here is (my |the )?(clear )?(thinking|reasoning) and reasoning:\s*\n', '', text, flags=re.MULTILINE)
+    text = re.sub(r'(?i)^Next, I will (summarize|provide)[\s\S]*?\n', '', text, flags=re.MULTILINE)
+    text = re.sub(r'(?i)^Now I will provide (the )?final (complete )?response[\s\S]*?\n', '', text, flags=re.MULTILINE)
     
     # 12. Clean up extra blank lines
     text = re.sub(r'\n{3,}', '\n\n', text)
