@@ -27,11 +27,15 @@ except Exception as e:
 print("=== END DIAGNOSTIC ===")
 
 STARTUP_ERROR_MESSAGE = None
+AGENT_AVAILABLE = False
+agent_instance = None
+HATZ_API_KEY = None  # Will be set below
+
 try:
     from biomni.agent.a1 import A1
     import openai
 
-    print("Initializing Biomni agent on startup...")
+    print("Preparing Biomni agent setup...")
     HATZ_API_KEY = os.environ.get("HATZ_API_KEY")
     if not HATZ_API_KEY:
         raise ValueError("ERROR: HATZ_API_KEY not found.")
@@ -44,21 +48,13 @@ try:
         original_init(self, *args, **kwargs)
     openai.OpenAI.__init__ = patched_init
 
-    agent_instance = A1(
-        llm='gpt-4.1-mini',
-        api_key=HATZ_API_KEY,
-        base_url="https://ai.hatz.ai/v1",
-        timeout_seconds=600
-        use_tool_retriever=True, 
-        path="./data",
-    )
     AGENT_AVAILABLE = True
-    print("Successfully initialized Biomni agent.")
+    print("Biomni agent ready for lazy initialization.")
 except Exception as e:
     STARTUP_ERROR_MESSAGE = traceback.format_exc()
     agent_instance = None
     AGENT_AVAILABLE = False
-    print("FAILED TO INITIALIZE BIOMNI AGENT ON STARTUP")
+    print("FAILED TO PREPARE BIOMNI AGENT")
     print(STARTUP_ERROR_MESSAGE)
 
 def clean_response(text):
@@ -169,16 +165,37 @@ def clean_response(text):
     return text.strip()
 
 def respond(message, history):
+    global agent_instance
+
     if STARTUP_ERROR_MESSAGE:
         yield f"ERROR:\n\n{STARTUP_ERROR_MESSAGE}"
         return
-    if not AGENT_AVAILABLE or agent_instance is None:
+
+    if not AGENT_AVAILABLE:
         yield "ERROR: The Biomni agent is not available for an unknown reason."
         return
+
     if not message:
         yield "(empty)"
         return
-        
+
+    # Lazy initialization of the agent
+    if agent_instance is None:
+        try:
+            yield "Initializing the Biomni agent and downloading the data lake... This may take a few minutes."
+            agent_instance = A1(
+                llm='gpt-4.1-mini',
+                api_key=HATZ_API_KEY,
+                base_url="https://ai.hatz.ai/v1",
+                timeout_seconds=600,
+                use_tool_retriever=True,
+                path="./data"
+            )
+            yield "Agent initialized! Processing your request..."
+        except Exception as e:
+            yield f"Failed to initialize the Biomni agent:\n\n{traceback.format_exc()}"
+            return
+
     try:
         final_response = "Agent did not return a response."
         all_chunks = []
