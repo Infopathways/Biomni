@@ -119,6 +119,22 @@ def clean_response(text):
 
     # 11i. Catch "I will rely on my knowledge" preamble
     text = re.sub(r'(?i)^I will (rely on|use) (my )?(biomedical|scientific|domain) knowledge[\s\S]*?(to answer|based on)[\s\S]*?\n\n', '', text)
+    text = re.sub(r'(?i)^There appears to be (a )?persistent error related to (the )?missing.*?(package|library|module)[\s\S]*?(I will change|to provide|given this)[\s\S]*?\n\n', '', text)
+
+    # 11r. Catch "I will compose" pattern
+    text = re.sub(r'(?i)^I will compose (a )?concise summary[\s\S]*?\n\n', '', text)
+
+    # 11s. Catch "I will change my approach" pattern
+    text = re.sub(r'(?i)^I will change my approach[\s\S]*?\n\n', '', text)
+
+    # 11t. Catch "This way, I can deliver" pattern
+    text = re.sub(r'(?i)^This way, I can deliver[\s\S]*?\n\n', '', text)
+
+    # 11u. Catch "knowledge-based summary" preamble
+    text = re.sub(r'(?i)^.*?knowledge-based summary.*?\n', '', text, flags=re.MULTILINE)
+
+    # 11v. Catch "knowledge cutoff" preamble
+    text = re.sub(r'(?i)^.*?knowledge cutoff.*?\n', '', text, flags=re.MULTILINE)
     
     # 12. Clean up extra blank lines
     text = re.sub(r'\n{3,}', '\n\n', text)
