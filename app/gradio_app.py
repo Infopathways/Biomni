@@ -135,6 +135,31 @@ def clean_response(text):
 
     # 11v. Catch "knowledge cutoff" preamble
     text = re.sub(r'(?i)^.*?knowledge cutoff.*?\n', '', text, flags=re.MULTILINE)
+    # 11w. Catch Python code blocks the agent tries to show the user
+    text = re.sub(r'(?is)```python[\s\S]*?```', '', text)
+    text = re.sub(r'(?is)^from\s+\w+.*?print\(.*?\)', '', text, flags=re.MULTILINE)
+    text = re.sub(r'(?is)^import\s+\w+[\s\S]*?print\(.*?\)', '', text, flags=re.MULTILINE)
+
+    # 11x. Catch "Thank you for the clarification" preamble
+    text = re.sub(r'(?i)^Thank you for the clarification[\s\S]*?\n\n', '', text)
+
+    # 11y. Catch "Here is the plan again" pattern
+    text = re.sub(r'(?i)^Here is the plan again:[\s\S]*?\n\n', '', text)
+
+    # 11z. Catch "Please confirm the scope" pattern
+    text = re.sub(r'(?i)^Please confirm the scope[\s\S]*?\n\n', '', text)
+
+    # 11aa. Catch "I need to clarify the user's intent" pattern
+    text = re.sub(r'(?i)^I need to clarify the user.s intent[\s\S]*?\n\n', '', text)
+
+    # 11bb. Catch "To assist you effectively" pattern
+    text = re.sub(r'(?i)^To assist you effectively[\s\S]*?\n\n', '', text)
+
+    # 11cc. Catch "Since direct database queries are encountering module errors"
+    text = re.sub(r'(?i)^Since direct database queries are encountering module errors[\s\S]*?\n\n', '', text)
+
+    # 11dd. Catch "I will finalize with a concise explanation"
+    text = re.sub(r'(?i)^I will finalize with[\s\S]*?\n\n', '', text)
     
     # 12. Clean up extra blank lines
     text = re.sub(r'\n{3,}', '\n\n', text)
