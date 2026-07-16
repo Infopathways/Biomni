@@ -49,6 +49,8 @@ try:
         api_key=HATZ_API_KEY,
         base_url="https://ai.hatz.ai/v1",
         timeout_seconds=600
+        use_tool_retriever=True, 
+        path="./data",
     )
     AGENT_AVAILABLE = True
     print("Successfully initialized Biomni agent.")
