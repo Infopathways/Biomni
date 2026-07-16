@@ -42,4 +42,9 @@ dependencies:
       - tooluniverse
       - python-dotenv
       - biomni
+      - biopython>=1.81
+      - bioservices>=1.11
+      - pybio>=0.2
       - PyPDF2>=3.0.0
+      - pdfplumber
+      - pymupdf
