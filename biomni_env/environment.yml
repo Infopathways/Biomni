@@ -25,8 +25,8 @@ dependencies:
       - langchain-ollama
       - langchain-community
       - openai
-      - beautifulsoup4
-      - lxml
+      - beautifulsoup4>=4.12
+      - lxml>=4.9
       - tqdm
       - seaborn
       - networkx
@@ -83,3 +83,10 @@ dependencies:
       - pydantic>=2.0
       - httpx>=0.25
       - aiohttp>=3.8
+      - google-search-results>=2.4
+      - google-api-python-client>=2.100
+      - requests-html>=0.10
+      - selenium>=4.15
+      - webdriver-manager>=4.0
+      - python-docx
+      - python-pptx
