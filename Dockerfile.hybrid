@@ -31,5 +31,7 @@ COPY app ./app
 COPY start.sh ./start.sh
 RUN chmod +x ./start.sh
 
+RUN python -c "from biomni.data import download; download(path='./data')"
+
 EXPOSE 7860
 CMD ["conda", "run", "-n", "biomni_e1", "python", "-m", "app.gradio_app"]
