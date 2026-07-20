@@ -69,13 +69,13 @@ def clean_response(text):
     text = re.sub(r'(?im)^Plan:\s*\n(?:[-*]?\s*.*\n)+', '', text)
     text = re.sub(r'^(The user (is asking|asked|requested)|To explain|To answer|My thinking|Thinking Process|Reasoning)[\s\S]*?\n\n', '', text, flags=re.IGNORECASE | re.MULTILINE)
     
-    # 4. General cleanup
+    # 4. General cleanup of leftover headers or conversational filler at the top
     text = re.sub(r'={5,}.*?={5,}\n?', '', text)
     text = re.sub(r'</?solution>', '', text)
     text = re.sub(r'^(I understand|I will now|I will provide|I see you|I will comply|I need to include|I\'ll follow).*?\n', '', text, flags=re.IGNORECASE | re.MULTILINE)
     text = re.sub(r'^\d+\.\s+Ask.*?\n', '', text, flags=re.MULTILINE)
     
-    # 5. Remove leaked reasoning
+    # 5. Remove leaked reasoning about execute/solution tags and XML tags
     text = re.sub(r'(?i)(I realize that I mistakenly used a print statement.*?)(?=\n\n|\Z)', '', text, flags=re.DOTALL)
     text = re.sub(r'(?i)(I should provide the response as text inside the execute tag.*?)(?=\n\n|\Z)', '', text, flags=re.DOTALL)
     text = re.sub(r'(?i)(it\'?s more appropriate to use the .*? tag.*?)(?=\n\n|\Z)', '', text, flags=re.DOTALL)
@@ -83,8 +83,82 @@ def clean_response(text):
     text = re.sub(r'</?solution>', '', text, flags=re.IGNORECASE)
     text = re.sub(r'(?i)^\s*(Since this is a direct response|Instead, I should|I realize that)[\s\S]*?\n\n', '', text)
     
-    # 6-11dd. Additional cleanup patterns (simplified for brevity - keep your existing ones)
+    # 6. Catch the "Now, to align with instructions" pattern and everything before it
+    text = re.sub(r'(?is)^[\s\S]*?(now,?\s+to\s+align\s+with\s+the?\s+instructions?,?\s+I\s+will\s+fix\s+that\s+response\s+by\s+including\s+the?\s+required\s+tags?\.?\s*\n+)', '', text)
+    
+    # 7. Catch "I greeted" / "I responded" / "you greeted" reasoning preamble
+    text = re.sub(r'(?is)^[\s\S]*?(I\s+(greeted|responded|replied)|You\s+(greeted|responded|said)|Currently,?\s+you\s+greeted)[\s\S]*?\n\n', '', text)
+    
+    # 8. Catch "Thank you for pointing that out" / "I will make sure to include my thinking process"
+    text = re.sub(r'(?is)^[\s\S]*?(Thank\s+you\s+for\s+pointing\s+that\s+out|I\s+will\s+make\s+sure\s+to\s+include\s+my\s+thinking\s+process|followed\s+by\s+the\s+appropriate\s+tag\s+in\s+every\s+response)[\s\S]*?\n\n', '', text)
+    
+    # 9. Catch any sentence mentioning "thinking process" or "appropriate tag"
+    text = re.sub(r'(?i)^.*?(thinking process|appropriate tag|required tag|execute tag|solution tag).*?\n', '', text, flags=re.MULTILINE)
+    
+    # 10. Generic catch-all - find the first line that looks like an actual answer
+    answer_match = re.search(r'(?m)^(Hello!|Hi!|Hey!|Greetings!|Sure!|Of course!|Absolutely!|Yes,?|No,?|The |A |An |I\s+can|Let\s+me|Here\s+is|Here\s+are|You\'?re\s+welcome|Thank\s+you)', text)
+    if answer_match and answer_match.start() > 0:
+        text = text[answer_match.start():]
+    
+    # 11. Remove any remaining XML-style tags
     text = re.sub(r'</?\w+>', '', text, flags=re.IGNORECASE)
+    # 11d. Catch "Here is my clear thinking and reasoning" and everything before the actual answer
+    text = re.sub(r'(?i)^[\s\S]*?(here\s+is\s+(my\s+)?(clear\s+)?think(ing|er)|next,?\s+I\s+will\s+(summarize|provide)|now\s+I\s+will\s+provide\s+(the\s+)?(final\s+)?response)[\s\S]*?(within\s+the\s+tag\.?|below\.?|here\s+is.*?)\.?\s*\n+', '', text)
+
+    # 11e. Catch standalone reasoning lines
+    text = re.sub(r'(?i)^Here is (my |the )?(clear )?(thinking|reasoning) and reasoning:\s*\n', '', text, flags=re.MULTILINE)
+    text = re.sub(r'(?i)^Next, I will (summarize|provide)[\s\S]*?\n', '', text, flags=re.MULTILINE)
+    text = re.sub(r'(?i)^Now I will provide (the )?final (complete )?response[\s\S]*?\n', '', text, flags=re.MULTILINE)
+    # 11g. Catch tool/module failure reasoning
+    text = re.sub(r'(?i)^The (module|tool|database|literature|API) (error|failure|problem|issue) persists[\s\S]*?(I will rely on|to answer the question|based on)[\s\S]*?\n\n', '', text)
+
+    # 11h. Catch "Given this repeated failure" pattern
+    text = re.sub(r'(?i)^Given (this|the) (repeated )?(failure|error)[\s\S]*?(I will rely|based on)[\s\S]*?\n\n', '', text)
+
+    # 11i. Catch "I will rely on my knowledge" preamble
+    text = re.sub(r'(?i)^I will (rely on|use) (my )?(biomedical|scientific|domain) knowledge[\s\S]*?(to answer|based on)[\s\S]*?\n\n', '', text)
+    text = re.sub(r'(?i)^There appears to be (a )?persistent error related to (the )?missing.*?(package|library|module)[\s\S]*?(I will change|to provide|given this)[\s\S]*?\n\n', '', text)
+
+    # 11r. Catch "I will compose" pattern
+    text = re.sub(r'(?i)^I will compose (a )?concise summary[\s\S]*?\n\n', '', text)
+
+    # 11s. Catch "I will change my approach" pattern
+    text = re.sub(r'(?i)^I will change my approach[\s\S]*?\n\n', '', text)
+
+    # 11t. Catch "This way, I can deliver" pattern
+    text = re.sub(r'(?i)^This way, I can deliver[\s\S]*?\n\n', '', text)
+
+    # 11u. Catch "knowledge-based summary" preamble
+    text = re.sub(r'(?i)^.*?knowledge-based summary.*?\n', '', text, flags=re.MULTILINE)
+
+    # 11v. Catch "knowledge cutoff" preamble
+    text = re.sub(r'(?i)^.*?knowledge cutoff.*?\n', '', text, flags=re.MULTILINE)
+    # 11w. Catch Python code blocks the agent tries to show the user
+    text = re.sub(r'(?is)```python[\s\S]*?```', '', text)
+    text = re.sub(r'(?is)^from\s+\w+.*?print\(.*?\)', '', text, flags=re.MULTILINE)
+    text = re.sub(r'(?is)^import\s+\w+[\s\S]*?print\(.*?\)', '', text, flags=re.MULTILINE)
+
+    # 11x. Catch "Thank you for the clarification" preamble
+    text = re.sub(r'(?i)^Thank you for the clarification[\s\S]*?\n\n', '', text)
+
+    # 11y. Catch "Here is the plan again" pattern
+    text = re.sub(r'(?i)^Here is the plan again:[\s\S]*?\n\n', '', text)
+
+    # 11z. Catch "Please confirm the scope" pattern
+    text = re.sub(r'(?i)^Please confirm the scope[\s\S]*?\n\n', '', text)
+
+    # 11aa. Catch "I need to clarify the user's intent" pattern
+    text = re.sub(r'(?i)^I need to clarify the user.s intent[\s\S]*?\n\n', '', text)
+
+    # 11bb. Catch "To assist you effectively" pattern
+    text = re.sub(r'(?i)^To assist you effectively[\s\S]*?\n\n', '', text)
+
+    # 11cc. Catch "Since direct database queries are encountering module errors"
+    text = re.sub(r'(?i)^Since direct database queries are encountering module errors[\s\S]*?\n\n', '', text)
+
+    # 11dd. Catch "I will finalize with a concise explanation"
+    text = re.sub(r'(?i)^I will finalize with[\s\S]*?\n\n', '', text)
+
     text = re.sub(r'\n{3,}', '\n\n', text)
     
     return text.strip()
