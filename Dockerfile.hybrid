@@ -31,7 +31,10 @@ COPY app ./app
 COPY start.sh ./start.sh
 RUN chmod +x ./start.sh
 
-RUN python -c "from biomni.data import download; download(path='./data')"
+ARG HATZ_API_KEY
+ENV HATZ_API_KEY=$HATZ_API_KEY
+
+RUN python -c "from biomni.agent.a1 import A1; A1(llm='gpt-4.1-mini', api_key='$HATZ_API_KEY', base_url='https://ai.hatz.ai/v1', timeout_seconds=600, use_tool_retriever=True, path='./data')"
 
 EXPOSE 7860
 CMD ["conda", "run", "-n", "biomni_e1", "python", "-m", "app.gradio_app"]
