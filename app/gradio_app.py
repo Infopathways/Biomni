@@ -158,7 +158,8 @@ def clean_response(text):
 
     # 11dd. Catch "I will finalize with a concise explanation"
     text = re.sub(r'(?i)^I will finalize with[\s\S]*?\n\n', '', text)
-
+    
+    # 12. Clean up extra blank lines
     text = re.sub(r'\n{3,}', '\n\n', text)
     
     return text.strip()
@@ -178,6 +179,7 @@ def respond(message, history):
         yield "(empty)"
         return
 
+    # Lazy initialization of the agent
     if agent_instance is None:
         try:
             yield "Initializing the Biomni agent and downloading the data lake... This may take a few minutes."
@@ -236,6 +238,7 @@ def main(host: str, port: int):
         button_primary_background_fill="#ff8800",
         button_primary_background_fill_hover="#3662d4",
         button_primary_text_color="white",
+        # Force title color in the theme itself
         block_title_text_color="#ff8800",
         block_label_text_color="#ff8800",
     )
@@ -252,6 +255,7 @@ def main(host: str, port: int):
         --text-on-accent: #ffffff;
         --border-color: #e2e8f0;
         --user-bubble-bg: rgba(255, 136, 0, 0.12);
+        --stop-red: #e53e3e;
     }
 
     gradio-app, .gradio-container {
@@ -259,45 +263,77 @@ def main(host: str, port: int):
         font-family: 'Montserrat', sans-serif !important;
     }
 
-    /* Hide default Gradio title */
-    .gradio-container h1, .wrap h1, #component-0 h1 { display: none !important; }
-
-    /* Custom header */
-    .custom-header {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        gap: 15px !important;
-        margin-bottom: 10px !important;
-    }
-    .custom-header img { width: 60px !important; height: 60px !important; }
-    .custom-header h1 {
+    .gradio-container .main-title-wrap,
+    .gradio-container .main-title,
+    .gradio-container h1,
+    .gradio-container .main-title h1,
+    #component-0 h1,
+    .wrap h1 {
         color: #ff8800 !important;
         font-weight: 700 !important;
         font-size: 2rem !important;
-        margin: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
     }
+
+    .gradio-container .main-title::before {
+        content: "";
+        display: block;
+        width: 80px;
+        height: 80px;
+        margin-bottom: 15px;
+        background-image: url("https://48131155.fs1.hubspotusercontent-na1.net/hubfs/48131155/grey%20logo%20europa.png");
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+
     .gradio-container .description {
         color: #8a8a8a !important;
         font-size: 0.95rem !important;
         text-align: center !important;
-        margin-bottom: 20px !important;
     }
 
-    /* Chat bubbles */
-    [data-testid="user"] .message-bubble {
+    [data-testid="user"] {
+        background-color: transparent !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    [data-testid="user"] .message-bubble,
+    [data-testid="user"] .message,
+    [data-testid="user"] .chatbot-user-message {
         background-color: var(--user-bubble-bg) !important;
         color: var(--text-primary) !important;
         border-radius: 12px !important;
         border: 1px solid rgba(255, 136, 0, 0.25) !important;
-        position: relative !important;
     }
-    [data-testid="assistant"] .message-bubble {
+    [data-testid="user"] .message-bubble p,
+    [data-testid="user"] .message-bubble span,
+    [data-testid="user"] .message-bubble div {
+        color: var(--text-primary) !important;
+    }
+
+    [data-testid="assistant"] {
+        background-color: transparent !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    [data-testid="assistant"] .message-bubble,
+    [data-testid="assistant"] .message,
+    [data-testid="assistant"] .chatbot-bot-message {
         background-color: var(--background-card) !important;
         color: var(--text-primary) !important;
         border: 1px solid var(--border-color) !important;
         border-radius: 12px !important;
-        position: relative !important;
+    }
+    [data-testid="assistant"] .message-bubble p,
+    [data-testid="assistant"] .message-bubble span,
+    [data-testid="assistant"] .message-bubble div {
+        color: var(--text-primary) !important;
     }
 
     button.primary {
@@ -306,93 +342,96 @@ def main(host: str, port: int):
         border: none !important;
         font-weight: 600 !important;
         border-radius: 10px !important;
+        transition: background-color 0.2s ease, transform 0.1s ease !important;
     }
     button.primary:hover {
         background-color: var(--secondary-accent) !important;
+        color: var(--text-on-accent) !important;
+    }
+    button.primary:active {
+        transform: scale(0.97) !important;
+    }
+
+    .stop-button,
+    button.stop,
+    [data-testid="stop-button"],
+    .gradio-button.stop,
+    button[aria-label="Stop"] {
+        background-color: #e53e3e !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        transition: background-color 0.2s ease !important;
+    }
+    .stop-button:hover,
+    button.stop:hover,
+    [data-testid="stop-button"]:hover,
+    .gradio-button.stop:hover,
+    button[aria-label="Stop"]:hover {
+        background-color: #c53030 !important;
     }
 
     .gradio-textbox textarea {
         border: 1px solid var(--border-color) !important;
         border-radius: 8px !important;
         background-color: var(--background-card) !important;
+        color: var(--text-primary) !important;
+        font-size: 0.95rem !important;
+    }
+    .gradio-textbox textarea:focus {
+        border-color: var(--primary-accent) !important;
+        box-shadow: 0 0 0 2px rgba(255, 136, 0, 0.2) !important;
     }
 
-    footer { display: none !important; }
-
-    /* Copy button */
-    .copy-btn {
-        position: absolute !important;
-        top: 8px !important;
-        right: 8px !important;
-        background: rgba(255, 136, 0, 0.9) !important;
-        border: none !important;
-        border-radius: 4px !important;
-        cursor: pointer !important;
-        opacity: 0.8 !important;
-        font-size: 11px !important;
-        padding: 3px 8px !important;
-        z-index: 100 !important;
-        color: white !important;
+    .prose {
+        color: var(--text-primary) !important;
     }
-    .copy-btn:hover {
-        opacity: 1 !important;
-        background: #ff8800 !important;
+    .prose h1, .prose h2, .prose h3 {
+        color: var(--secondary-accent) !important;
+    }
+    .prose a {
+        color: var(--secondary-accent) !important;
+    }
+    .prose a:hover {
+        color: var(--primary-accent) !important;
+    }
+    .prose p {
+        color: var(--text-primary) !important;
+    }
+
+    .prose pre {
+        background-color: #2d2d2d !important;
+        border-radius: 10px !important;
+    }
+    .prose code {
+        color: var(--primary-accent) !important;
+    }
+
+    footer {
+        display: none !important;
     }
     """
 
-    js_content = """
-    function addCopyButtons() {
-        document.querySelectorAll('[data-testid="user"] .message-bubble, [data-testid="assistant"] .message-bubble').forEach(msg => {
-            if (msg.querySelector('.copy-btn')) return;
-            const btn = document.createElement('button');
-            btn.innerHTML = '📋 Copy';
-            btn.className = 'copy-btn';
-            btn.type = 'button';
-            btn.onclick = function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                navigator.clipboard.writeText(msg.innerText).then(() => {
-                    btn.innerHTML = '✓ Done';
-                    setTimeout(() => btn.innerHTML = '📋 Copy', 1500);
-                });
-            };
-            msg.appendChild(btn);
-        });
-    }
-    new MutationObserver(addCopyButtons).observe(document.body, { childList: true, subtree: true });
-    addCopyButtons();
-    """
-
-    with gr.Blocks(theme=theme, css=css_content, js=js_content, title="Biomni AI Agent") as demo:
-        gr.HTML('<div class="custom-header"><img src="https://48131155.fs1.hubspotusercontent-na1.net/hubfs/48131155/grey%20logo%20europa.png" /><h1>Biomni AI Agent</h1></div>')
-        gr.Markdown("A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.")
-
-        chatbot = gr.Chatbot(label="Chat", bubble_full_width=False)
-
-        with gr.Row():
-            msg = gr.Textbox(placeholder="Ask about genes, diseases, proteins...", lines=1, scale=9, show_label=False)
-            submit_btn = gr.Button("Send", variant="primary", scale=1)
-
-        gr.ClearButton([msg, chatbot], value="Clear Chat")
-
-        def user(user_message, history):
-            return "", history + [[user_message, None]]
-
-        def bot(history):
-            for h in respond(history[-1][0], history[:-1]):
-                history[-1][1] = h
-                yield history
-
-        msg.submit(fn=user, inputs=[msg, chatbot], outputs=[msg, chatbot], queue=False).then(fn=bot, inputs=chatbot, outputs=chatbot, queue=True)
-        submit_btn.click(fn=user, inputs=[msg, chatbot], outputs=[msg, chatbot], queue=False).then(fn=bot, inputs=chatbot, outputs=chatbot, queue=True)
-
-    demo.queue()
+    iface = gr.ChatInterface(
+        fn=respond,
+        title="Biomni AI Agent",
+        description="A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.",
+        theme=theme,
+        css=css_content,
+        examples=None, retry_btn=None, undo_btn=None, clear_btn=None
+    )
+    iface.queue()
     print(f"Launching Gradio UI on {host}:{port}")
-    demo.launch(server_name=host, server_port=port, share=False)
+    iface.launch(server_name=host, server_port=port, share=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT") or os.environ.get("WEBSITES_PORT") or 7860))
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("PORT") or os.environ.get("WEBSITES_PORT") or 7860),
+    )
     args = parser.parse_args()
     main(args.host, args.port)
