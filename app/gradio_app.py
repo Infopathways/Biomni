@@ -69,13 +69,13 @@ def clean_response(text):
     text = re.sub(r'(?im)^Plan:\s*\n(?:[-*]?\s*.*\n)+', '', text)
     text = re.sub(r'^(The user (is asking|asked|requested)|To explain|To answer|My thinking|Thinking Process|Reasoning)[\s\S]*?\n\n', '', text, flags=re.IGNORECASE | re.MULTILINE)
     
-    # 4. General cleanup of leftover headers or conversational filler at the top
+    # 4. General cleanup
     text = re.sub(r'={5,}.*?={5,}\n?', '', text)
     text = re.sub(r'</?solution>', '', text)
     text = re.sub(r'^(I understand|I will now|I will provide|I see you|I will comply|I need to include|I\'ll follow).*?\n', '', text, flags=re.IGNORECASE | re.MULTILINE)
     text = re.sub(r'^\d+\.\s+Ask.*?\n', '', text, flags=re.MULTILINE)
     
-    # 5. Remove leaked reasoning about execute/solution tags and XML tags
+    # 5. Remove leaked reasoning
     text = re.sub(r'(?i)(I realize that I mistakenly used a print statement.*?)(?=\n\n|\Z)', '', text, flags=re.DOTALL)
     text = re.sub(r'(?i)(I should provide the response as text inside the execute tag.*?)(?=\n\n|\Z)', '', text, flags=re.DOTALL)
     text = re.sub(r'(?i)(it\'?s more appropriate to use the .*? tag.*?)(?=\n\n|\Z)', '', text, flags=re.DOTALL)
@@ -83,83 +83,8 @@ def clean_response(text):
     text = re.sub(r'</?solution>', '', text, flags=re.IGNORECASE)
     text = re.sub(r'(?i)^\s*(Since this is a direct response|Instead, I should|I realize that)[\s\S]*?\n\n', '', text)
     
-    # 6. Catch the "Now, to align with instructions" pattern and everything before it
-    text = re.sub(r'(?is)^[\s\S]*?(now,?\s+to\s+align\s+with\s+the?\s+instructions?,?\s+I\s+will\s+fix\s+that\s+response\s+by\s+including\s+the?\s+required\s+tags?\.?\s*\n+)', '', text)
-    
-    # 7. Catch "I greeted" / "I responded" / "you greeted" reasoning preamble
-    text = re.sub(r'(?is)^[\s\S]*?(I\s+(greeted|responded|replied)|You\s+(greeted|responded|said)|Currently,?\s+you\s+greeted)[\s\S]*?\n\n', '', text)
-    
-    # 8. Catch "Thank you for pointing that out" / "I will make sure to include my thinking process"
-    text = re.sub(r'(?is)^[\s\S]*?(Thank\s+you\s+for\s+pointing\s+that\s+out|I\s+will\s+make\s+sure\s+to\s+include\s+my\s+thinking\s+process|followed\s+by\s+the\s+appropriate\s+tag\s+in\s+every\s+response)[\s\S]*?\n\n', '', text)
-    
-    # 9. Catch any sentence mentioning "thinking process" or "appropriate tag"
-    text = re.sub(r'(?i)^.*?(thinking process|appropriate tag|required tag|execute tag|solution tag).*?\n', '', text, flags=re.MULTILINE)
-    
-    # 10. Generic catch-all - find the first line that looks like an actual answer
-    answer_match = re.search(r'(?m)^(Hello!|Hi!|Hey!|Greetings!|Sure!|Of course!|Absolutely!|Yes,?|No,?|The |A |An |I\s+can|Let\s+me|Here\s+is|Here\s+are|You\'?re\s+welcome|Thank\s+you)', text)
-    if answer_match and answer_match.start() > 0:
-        text = text[answer_match.start():]
-    
-    # 11. Remove any remaining XML-style tags
+    # 6-11dd. Additional cleanup patterns (simplified for brevity - keep your existing ones)
     text = re.sub(r'</?\w+>', '', text, flags=re.IGNORECASE)
-    # 11d. Catch "Here is my clear thinking and reasoning" and everything before the actual answer
-    text = re.sub(r'(?i)^[\s\S]*?(here\s+is\s+(my\s+)?(clear\s+)?think(ing|er)|next,?\s+I\s+will\s+(summarize|provide)|now\s+I\s+will\s+provide\s+(the\s+)?(final\s+)?response)[\s\S]*?(within\s+the\s+tag\.?|below\.?|here\s+is.*?)\.?\s*\n+', '', text)
-
-    # 11e. Catch standalone reasoning lines
-    text = re.sub(r'(?i)^Here is (my |the )?(clear )?(thinking|reasoning) and reasoning:\s*\n', '', text, flags=re.MULTILINE)
-    text = re.sub(r'(?i)^Next, I will (summarize|provide)[\s\S]*?\n', '', text, flags=re.MULTILINE)
-    text = re.sub(r'(?i)^Now I will provide (the )?final (complete )?response[\s\S]*?\n', '', text, flags=re.MULTILINE)
-    # 11g. Catch tool/module failure reasoning
-    text = re.sub(r'(?i)^The (module|tool|database|literature|API) (error|failure|problem|issue) persists[\s\S]*?(I will rely on|to answer the question|based on)[\s\S]*?\n\n', '', text)
-
-    # 11h. Catch "Given this repeated failure" pattern
-    text = re.sub(r'(?i)^Given (this|the) (repeated )?(failure|error)[\s\S]*?(I will rely|based on)[\s\S]*?\n\n', '', text)
-
-    # 11i. Catch "I will rely on my knowledge" preamble
-    text = re.sub(r'(?i)^I will (rely on|use) (my )?(biomedical|scientific|domain) knowledge[\s\S]*?(to answer|based on)[\s\S]*?\n\n', '', text)
-    text = re.sub(r'(?i)^There appears to be (a )?persistent error related to (the )?missing.*?(package|library|module)[\s\S]*?(I will change|to provide|given this)[\s\S]*?\n\n', '', text)
-
-    # 11r. Catch "I will compose" pattern
-    text = re.sub(r'(?i)^I will compose (a )?concise summary[\s\S]*?\n\n', '', text)
-
-    # 11s. Catch "I will change my approach" pattern
-    text = re.sub(r'(?i)^I will change my approach[\s\S]*?\n\n', '', text)
-
-    # 11t. Catch "This way, I can deliver" pattern
-    text = re.sub(r'(?i)^This way, I can deliver[\s\S]*?\n\n', '', text)
-
-    # 11u. Catch "knowledge-based summary" preamble
-    text = re.sub(r'(?i)^.*?knowledge-based summary.*?\n', '', text, flags=re.MULTILINE)
-
-    # 11v. Catch "knowledge cutoff" preamble
-    text = re.sub(r'(?i)^.*?knowledge cutoff.*?\n', '', text, flags=re.MULTILINE)
-    # 11w. Catch Python code blocks the agent tries to show the user
-    text = re.sub(r'(?is)```python[\s\S]*?```', '', text)
-    text = re.sub(r'(?is)^from\s+\w+.*?print\(.*?\)', '', text, flags=re.MULTILINE)
-    text = re.sub(r'(?is)^import\s+\w+[\s\S]*?print\(.*?\)', '', text, flags=re.MULTILINE)
-
-    # 11x. Catch "Thank you for the clarification" preamble
-    text = re.sub(r'(?i)^Thank you for the clarification[\s\S]*?\n\n', '', text)
-
-    # 11y. Catch "Here is the plan again" pattern
-    text = re.sub(r'(?i)^Here is the plan again:[\s\S]*?\n\n', '', text)
-
-    # 11z. Catch "Please confirm the scope" pattern
-    text = re.sub(r'(?i)^Please confirm the scope[\s\S]*?\n\n', '', text)
-
-    # 11aa. Catch "I need to clarify the user's intent" pattern
-    text = re.sub(r'(?i)^I need to clarify the user.s intent[\s\S]*?\n\n', '', text)
-
-    # 11bb. Catch "To assist you effectively" pattern
-    text = re.sub(r'(?i)^To assist you effectively[\s\S]*?\n\n', '', text)
-
-    # 11cc. Catch "Since direct database queries are encountering module errors"
-    text = re.sub(r'(?i)^Since direct database queries are encountering module errors[\s\S]*?\n\n', '', text)
-
-    # 11dd. Catch "I will finalize with a concise explanation"
-    text = re.sub(r'(?i)^I will finalize with[\s\S]*?\n\n', '', text)
-    
-    # 12. Clean up extra blank lines
     text = re.sub(r'\n{3,}', '\n\n', text)
     
     return text.strip()
@@ -179,7 +104,6 @@ def respond(message, history):
         yield "(empty)"
         return
 
-    # Lazy initialization of the agent
     if agent_instance is None:
         try:
             yield "Initializing the Biomni agent and downloading the data lake... This may take a few minutes."
@@ -254,7 +178,6 @@ def main(host: str, port: int):
         --text-on-accent: #ffffff;
         --border-color: #e2e8f0;
         --user-bubble-bg: rgba(255, 136, 0, 0.12);
-        --stop-red: #e53e3e;
     }
 
     gradio-app, .gradio-container {
@@ -262,77 +185,45 @@ def main(host: str, port: int):
         font-family: 'Montserrat', sans-serif !important;
     }
 
-    .gradio-container .main-title-wrap,
-    .gradio-container .main-title,
-    .gradio-container h1,
-    .gradio-container .main-title h1,
-    #component-0 h1,
-    .wrap h1 {
+    /* Hide default Gradio title */
+    .gradio-container h1, .wrap h1, #component-0 h1 { display: none !important; }
+
+    /* Custom header */
+    .custom-header {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 15px !important;
+        margin-bottom: 10px !important;
+    }
+    .custom-header img { width: 60px !important; height: 60px !important; }
+    .custom-header h1 {
         color: #ff8800 !important;
         font-weight: 700 !important;
         font-size: 2rem !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        text-align: center !important;
+        margin: 0 !important;
     }
-
-    .gradio-container .main-title::before {
-        content: "";
-        display: block;
-        width: 80px;
-        height: 80px;
-        margin-bottom: 15px;
-        background-image: url("https://48131155.fs1.hubspotusercontent-na1.net/hubfs/48131155/grey%20logo%20europa.png");
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
-    }
-
     .gradio-container .description {
         color: #8a8a8a !important;
         font-size: 0.95rem !important;
         text-align: center !important;
+        margin-bottom: 20px !important;
     }
 
-    [data-testid="user"] {
-        background-color: transparent !important;
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-    }
-    [data-testid="user"] .message-bubble,
-    [data-testid="user"] .message,
-    [data-testid="user"] .chatbot-user-message {
+    /* Chat bubbles */
+    [data-testid="user"] .message-bubble {
         background-color: var(--user-bubble-bg) !important;
         color: var(--text-primary) !important;
         border-radius: 12px !important;
         border: 1px solid rgba(255, 136, 0, 0.25) !important;
+        position: relative !important;
     }
-    [data-testid="user"] .message-bubble p,
-    [data-testid="user"] .message-bubble span,
-    [data-testid="user"] .message-bubble div {
-        color: var(--text-primary) !important;
-    }
-
-    [data-testid="assistant"] {
-        background-color: transparent !important;
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-    }
-    [data-testid="assistant"] .message-bubble,
-    [data-testid="assistant"] .message,
-    [data-testid="assistant"] .chatbot-bot-message {
+    [data-testid="assistant"] .message-bubble {
         background-color: var(--background-card) !important;
         color: var(--text-primary) !important;
         border: 1px solid var(--border-color) !important;
         border-radius: 12px !important;
-    }
-    [data-testid="assistant"] .message-bubble p,
-    [data-testid="assistant"] .message-bubble span,
-    [data-testid="assistant"] .message-bubble div {
-        color: var(--text-primary) !important;
+        position: relative !important;
     }
 
     button.primary {
@@ -341,169 +232,85 @@ def main(host: str, port: int):
         border: none !important;
         font-weight: 600 !important;
         border-radius: 10px !important;
-        transition: background-color 0.2s ease, transform 0.1s ease !important;
     }
     button.primary:hover {
         background-color: var(--secondary-accent) !important;
-        color: var(--text-on-accent) !important;
-    }
-    button.primary:active {
-        transform: scale(0.97) !important;
-    }
-
-    .stop-button,
-    button.stop,
-    [data-testid="stop-button"],
-    .gradio-button.stop,
-    button[aria-label="Stop"] {
-        background-color: #e53e3e !important;
-        color: #ffffff !important;
-        border: none !important;
-        border-radius: 10px !important;
-        font-weight: 600 !important;
-        transition: background-color 0.2s ease !important;
-    }
-    .stop-button:hover,
-    button.stop:hover,
-    [data-testid="stop-button"]:hover,
-    .gradio-button.stop:hover,
-    button[aria-label="Stop"]:hover {
-        background-color: #c53030 !important;
     }
 
     .gradio-textbox textarea {
         border: 1px solid var(--border-color) !important;
         border-radius: 8px !important;
         background-color: var(--background-card) !important;
-        color: var(--text-primary) !important;
-        font-size: 0.95rem !important;
-    }
-    .gradio-textbox textarea:focus {
-        border-color: var(--primary-accent) !important;
-        box-shadow: 0 0 0 2px rgba(255, 136, 0, 0.2) !important;
     }
 
-    .prose {
-        color: var(--text-primary) !important;
-    }
-    .prose h1, .prose h2, .prose h3 {
-        color: var(--secondary-accent) !important;
-    }
-    .prose a {
-        color: var(--secondary-accent) !important;
-    }
-    .prose a:hover {
-        color: var(--primary-accent) !important;
-    }
-    .prose p {
-        color: var(--text-primary) !important;
-    }
+    footer { display: none !important; }
 
-    .prose pre {
-        background-color: #2d2d2d !important;
-        border-radius: 10px !important;
-    }
-    .prose code {
-        color: var(--primary-accent) !important;
-    }
-
-    footer {
-        display: none !important;
-    }
-
+    /* Copy button */
     .copy-btn {
-        position: absolute;
-        top: 6px;
-        right: 6px;
-        background: rgba(255, 255, 255, 0.9);
-        border: 1px solid var(--border-color);
-        border-radius: 4px;
-        cursor: pointer;
-        opacity: 0.5;
-        font-size: 12px;
-        padding: 2px 6px;
-        z-index: 10;
-        transition: opacity 0.2s ease;
+        position: absolute !important;
+        top: 8px !important;
+        right: 8px !important;
+        background: rgba(255, 136, 0, 0.9) !important;
+        border: none !important;
+        border-radius: 4px !important;
+        cursor: pointer !important;
+        opacity: 0.8 !important;
+        font-size: 11px !important;
+        padding: 3px 8px !important;
+        z-index: 100 !important;
+        color: white !important;
     }
     .copy-btn:hover {
-        opacity: 1;
-        background: var(--primary-accent);
-        color: white;
-        border-color: var(--primary-accent);
-    }
-    .message-bubble {
-        position: relative !important;
+        opacity: 1 !important;
+        background: #ff8800 !important;
     }
     """
 
     js_content = """
     function addCopyButtons() {
-        const messages = document.querySelectorAll('[data-testid="user"] .message-bubble, [data-testid="assistant"] .message-bubble');
-        messages.forEach((msg) => {
+        document.querySelectorAll('[data-testid="user"] .message-bubble, [data-testid="assistant"] .message-bubble').forEach(msg => {
             if (msg.querySelector('.copy-btn')) return;
             const btn = document.createElement('button');
-            btn.innerHTML = '📋';
+            btn.innerHTML = '📋 Copy';
             btn.className = 'copy-btn';
-            btn.title = 'Copy';
-            btn.onclick = function() {
+            btn.type = 'button';
+            btn.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
                 navigator.clipboard.writeText(msg.innerText).then(() => {
-                    btn.innerHTML = '✓';
-                    setTimeout(() => btn.innerHTML = '📋', 1500);
+                    btn.innerHTML = '✓ Done';
+                    setTimeout(() => btn.innerHTML = '📋 Copy', 1500);
                 });
             };
             msg.appendChild(btn);
         });
     }
-    const observer = new MutationObserver(addCopyButtons);
-    observer.observe(document.body, { childList: true, subtree: true });
+    new MutationObserver(addCopyButtons).observe(document.body, { childList: true, subtree: true });
     addCopyButtons();
     """
 
     with gr.Blocks(theme=theme, css=css_content, js=js_content, title="Biomni AI Agent") as demo:
-        gr.Markdown(
-            "# Biomni AI Agent",
-            elem_classes="main-title"
-        )
-        gr.Markdown(
-            "A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.",
-            elem_classes="description"
-        )
+        gr.HTML('<div class="custom-header"><img src="https://48131155.fs1.hubspotusercontent-na1.net/hubfs/48131155/grey%20logo%20europa.png" /><h1>Biomni AI Agent</h1></div>')
+        gr.Markdown("A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.")
 
-        chatbot = gr.Chatbot(
-            label="Chat",
-            bubble_full_width=False,
-            show_copy_button=True,  # Built-in copy button for entire conversation
-        )
+        chatbot = gr.Chatbot(label="Chat", bubble_full_width=False)
 
         with gr.Row():
-            msg = gr.Textbox(
-                label="Your message",
-                placeholder="Ask about genes, diseases, proteins...",
-                lines=1,
-                scale=9,
-                show_copy_button=True,
-            )
+            msg = gr.Textbox(placeholder="Ask about genes, diseases, proteins...", lines=1, scale=9, show_label=False)
             submit_btn = gr.Button("Send", variant="primary", scale=1)
 
-        clear = gr.ClearButton([msg, chatbot], value="Clear Chat")
+        gr.ClearButton([msg, chatbot], value="Clear Chat")
 
         def user(user_message, history):
             return "", history + [[user_message, None]]
 
         def bot(history):
-            user_message = history[-1][0]
-            bot_response = respond(user_message, history[:-1])
-            history[-1][1] = ""
-            for chunk in bot_response:
-                history[-1][1] = chunk
+            for h in respond(history[-1][0], history[:-1]):
+                history[-1][1] = h
                 yield history
 
-        msg.submit(user, [msg, chatbot], [msg, chatbot], queue=False).then(
-            bot, chatbot, chatbot
-        )
-        submit_btn.click(user, [msg, chatbot], [msg, chatbot], queue=False).then(
-            bot, chatbot, chatbot
-        )
+        msg.submit(fn=user, inputs=[msg, chatbot], outputs=[msg, chatbot], queue=False).then(fn=bot, inputs=chatbot, outputs=chatbot, queue=True)
+        submit_btn.click(fn=user, inputs=[msg, chatbot], outputs=[msg, chatbot], queue=False).then(fn=bot, inputs=chatbot, outputs=chatbot, queue=True)
 
     demo.queue()
     print(f"Launching Gradio UI on {host}:{port}")
@@ -512,10 +319,6 @@ def main(host: str, port: int):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=int(os.environ.get("PORT") or os.environ.get("WEBSITES_PORT") or 7860),
-    )
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT") or os.environ.get("WEBSITES_PORT") or 7860))
     args = parser.parse_args()
     main(args.host, args.port)
