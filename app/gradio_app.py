@@ -238,7 +238,6 @@ def main(host: str, port: int):
         button_primary_background_fill="#ff8800",
         button_primary_background_fill_hover="#3662d4",
         button_primary_text_color="white",
-        # Force title color in the theme itself
         block_title_text_color="#ff8800",
         block_label_text_color="#ff8800",
     )
@@ -411,19 +410,104 @@ def main(host: str, port: int):
     footer {
         display: none !important;
     }
+
+    .copy-btn {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        cursor: pointer;
+        opacity: 0.5;
+        font-size: 12px;
+        padding: 2px 6px;
+        z-index: 10;
+        transition: opacity 0.2s ease;
+    }
+    .copy-btn:hover {
+        opacity: 1;
+        background: var(--primary-accent);
+        color: white;
+        border-color: var(--primary-accent);
+    }
+    .message-bubble {
+        position: relative !important;
+    }
     """
 
-    iface = gr.ChatInterface(
-        fn=respond,
-        title="Biomni AI Agent",
-        description="A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.",
-        theme=theme,
-        css=css_content,
-        examples=None, retry_btn=None, undo_btn=None, clear_btn=None
-    )
-    iface.queue()
+    js_content = """
+    function addCopyButtons() {
+        const messages = document.querySelectorAll('[data-testid="user"] .message-bubble, [data-testid="assistant"] .message-bubble');
+        messages.forEach((msg) => {
+            if (msg.querySelector('.copy-btn')) return;
+            const btn = document.createElement('button');
+            btn.innerHTML = '📋';
+            btn.className = 'copy-btn';
+            btn.title = 'Copy';
+            btn.onclick = function() {
+                navigator.clipboard.writeText(msg.innerText).then(() => {
+                    btn.innerHTML = '✓';
+                    setTimeout(() => btn.innerHTML = '📋', 1500);
+                });
+            };
+            msg.appendChild(btn);
+        });
+    }
+    const observer = new MutationObserver(addCopyButtons);
+    observer.observe(document.body, { childList: true, subtree: true });
+    addCopyButtons();
+    """
+
+    with gr.Blocks(theme=theme, css=css_content, js=js_content, title="Biomni AI Agent") as demo:
+        gr.Markdown(
+            "# Biomni AI Agent",
+            elem_classes="main-title"
+        )
+        gr.Markdown(
+            "A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.",
+            elem_classes="description"
+        )
+
+        chatbot = gr.Chatbot(
+            label="Chat",
+            bubble_full_width=False,
+            show_copy_button=True,  # Built-in copy button for entire conversation
+        )
+
+        with gr.Row():
+            msg = gr.Textbox(
+                label="Your message",
+                placeholder="Ask about genes, diseases, proteins...",
+                lines=1,
+                scale=9,
+                show_copy_button=True,
+            )
+            submit_btn = gr.Button("Send", variant="primary", scale=1)
+
+        clear = gr.ClearButton([msg, chatbot], value="Clear Chat")
+
+        def user(user_message, history):
+            return "", history + [[user_message, None]]
+
+        def bot(history):
+            user_message = history[-1][0]
+            bot_response = respond(user_message, history[:-1])
+            history[-1][1] = ""
+            for chunk in bot_response:
+                history[-1][1] = chunk
+                yield history
+
+        msg.submit(user, [msg, chatbot], [msg, chatbot], queue=False).then(
+            bot, chatbot, chatbot
+        )
+        submit_btn.click(user, [msg, chatbot], [msg, chatbot], queue=False).then(
+            bot, chatbot, chatbot
+        )
+
+    demo.queue()
     print(f"Launching Gradio UI on {host}:{port}")
-    iface.launch(server_name=host, server_port=port, share=False)
+    demo.launch(server_name=host, server_port=port, share=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
