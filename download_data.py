@@ -8,7 +8,7 @@ try:
         base_url='https://ai.hatz.ai/v1',
         timeout_seconds=600,
         use_tool_retriever=True,
-        path='./data'
+        path='/app/data'
     )
 except Exception as e:
     print('A1 init raised (expected for build-only download):', e)
