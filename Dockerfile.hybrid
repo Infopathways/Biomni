@@ -29,13 +29,10 @@ RUN conda clean -a -y && echo "Conda cache cleaned."
 SHELL ["conda", "run", "-n", "biomni_e1", "/bin/bash", "-c"]
 COPY app ./app
 COPY start.sh ./start.sh
-COPY download_data.py ./download_data.py
 RUN chmod +x ./start.sh
 
 ARG HATZ_API_KEY
 ENV HATZ_API_KEY=$HATZ_API_KEY
-
-RUN python download_data.py
 
 EXPOSE 7860
 CMD ["conda", "run", "-n", "biomni_e1", "python", "-m", "app.gradio_app"]
