@@ -90,3 +90,4 @@ dependencies:
       - webdriver-manager>=4.0
       - python-docx
       - python-pptx
+      - googlesearch-python
