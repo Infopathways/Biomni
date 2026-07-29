@@ -61,7 +61,7 @@ def clean_response(text):
     # 1. Delete the leaked backend instruction.
     text = re.sub(r'Each response must include thinking process.*?\n', '', text, flags=re.DOTALL)
 
-    # 2. THE TRANSITION SPLIT: Look for common phrases and cut everything BEFORE and INCLUDING them.
+    # 2. Look for common phrases and cut everything BEFORE and INCLUDING them.
     transition_phrases = r'(Now, I will provide.*?|I will now correct this.*?|Here is the (solution|corrected version|response).*?|Below is the.*?)'
     text = re.sub(r'^[\s\S]*?' + transition_phrases + r':?\s*\n+', '', text, flags=re.IGNORECASE)
 
@@ -189,7 +189,7 @@ def respond(message, history):
                 base_url="https://ai.hatz.ai/v1",
                 timeout_seconds=600,
                 use_tool_retriever=True,
-                path="./data"
+                path="/app/data"
             )
             yield "Agent initialized! Processing your request..."
         except Exception as e:
@@ -207,7 +207,21 @@ def respond(message, history):
         ]
         step_idx = 0
         
-        for chunk in agent_instance.go_stream(message, history=history):
+        # Build context from previous conversation turns
+        context = ""
+        if history and len(history) > 0:
+            recent = history[-4:] if len(history) > 4 else history
+            for turn in recent:
+                if isinstance(turn, (list, tuple)) and len(turn) == 2:
+                    user_msg, bot_msg = turn[0], turn[1]
+                    if user_msg and bot_msg:
+                        context += f"Previous user: {user_msg}\nPrevious assistant: {bot_msg}\n\n"
+        
+        full_input = message
+        if context:
+            full_input = f"{context}Current user message: {message}\nPlease respond to the current message using the context above."
+        
+        for chunk in agent_instance.go_stream(full_input):
             print(f"CHUNK KEYS: {chunk.keys()} | output: {chunk.get('output', '')[:100]}")
             if "output" in chunk and isinstance(chunk["output"], str):
                 current_text = chunk["output"]
@@ -223,7 +237,8 @@ def respond(message, history):
                 break
 
         cleaned_text = clean_response(final_response)
-         # Fallback if response is empty or unhelpful
+        
+        # Fallback if response is empty or unhelpful
         if not cleaned_text.strip():
             cleaned_text = "I wasn't able to generate a response. Could you rephrase or provide more details?"
         elif cleaned_text.lower() in [
