@@ -223,6 +223,16 @@ def respond(message, history):
                 break
 
         cleaned_text = clean_response(final_response)
+         # Fallback if response is empty or unhelpful
+        if not cleaned_text.strip():
+            cleaned_text = "I wasn't able to generate a response. Could you rephrase or provide more details?"
+        elif cleaned_text.lower() in [
+            "why no message",
+            "it seems you were expecting a message or response but no specific question or topic was provided. please clarify what information or assistance you need, and i will be happy to help.",
+            "i don't have long-term memory capabilities between interactions, so i can't remember past conversations once our session ends. however, during our current conversation, i can keep track of our discussion to provide coherent and context-aware responses. how can i assist you today?"
+        ]:
+            cleaned_text = "I wasn't able to process that. Could you rephrase or provide more context?"
+
         yield cleaned_text
 
     except Exception as e:
