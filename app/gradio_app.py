@@ -207,7 +207,7 @@ def respond(message, history):
         ]
         step_idx = 0
         
-        for chunk in agent_instance.go_stream(message):
+        for chunk in agent_instance.go_stream(message, history=history):
             print(f"CHUNK KEYS: {chunk.keys()} | output: {chunk.get('output', '')[:100]}")
             if "output" in chunk and isinstance(chunk["output"], str):
                 current_text = chunk["output"]
