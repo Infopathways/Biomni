@@ -219,7 +219,7 @@ def respond(message, history):
         
         full_input = message
         if context:
-            full_input = f"{context}Current user message: {message}\nPlease respond to the current message using the context above."
+            full_input = f"{context}Current user message: {message}\nPlease respond using Markdown formatting. Use **bold** for emphasis and *italic* for terms. Keep the response clear and concise."
         
         for chunk in agent_instance.go_stream(full_input):
             print(f"CHUNK KEYS: {chunk.keys()} | output: {chunk.get('output', '')[:100]}")
