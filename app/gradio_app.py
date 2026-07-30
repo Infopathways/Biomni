@@ -210,7 +210,7 @@ def respond(message, history):
         # Build context from previous conversation turns
         context = ""
         if history and len(history) > 0:
-            recent = history[-4:] if len(history) > 4 else history
+            recent = history[-20:] if len(history) > 20 else history
             for turn in recent:
                 if isinstance(turn, (list, tuple)) and len(turn) == 2:
                     user_msg, bot_msg = turn[0], turn[1]
