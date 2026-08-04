@@ -94,7 +94,7 @@ dependencies:
       - googlesearch-python
       - duckduckgo-search>=4.0
       - arxiv>=2.0
-      - metapub>=0.5
-      - scholarly>=1.12
+      - metapub==0.5.8
+      - scholarly==1.12.3
       - beautifulsoup4>=4.12
       - html5lib>=1.1
