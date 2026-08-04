@@ -48,6 +48,7 @@ dependencies:
       - PyPDF2>=3.0.0
       - pdfplumber
       - pymupdf
+      - reportlab
       - gget>=0.3
       - mygene>=3.2
       - requests-cache>=1.0
@@ -91,14 +92,9 @@ dependencies:
       - python-docx
       - python-pptx
       - googlesearch-python
-        - duckduckgo-search>=4.0
-        - arxiv>=2.0
-        - metapub>=0.5
-        - biopython>=1.81
-        - bioservices>=1.11
-        - requests-cache>=1.0
-        - xmltodict>=0.13
-        - scholarly>=1.12
+      - duckduckgo-search>=4.0
+      - arxiv>=2.0
+      - metapub>=0.5
+      - scholarly>=1.12
       - beautifulsoup4>=4.12
-        - lxml>=4.9
-        - html5lib>=1.1
+      - html5lib>=1.1
