@@ -108,27 +108,28 @@ def clean_response(text):
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text.strip()
 
-def generate_pdf(title, sections):
+def generate_pdf(title, sections, filename=None):
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import letter
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import inch
 
-    output_path = "/tmp/biomni_report.pdf"
+    output_path = filename or "/tmp/biomni_report.pdf"
     doc = SimpleDocTemplate(output_path, pagesize=letter,
                             rightMargin=0.6*inch, leftMargin=0.6*inch,
                             topMargin=0.8*inch, bottomMargin=0.6*inch)
 
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle('Title', parent=styles['Heading1'],
-                                  fontSize=20, textColor=colors.darkblue,
+                                  fontSize=20, textColor=colors.HexColor('#ff8800'),
                                   spaceAfter=16, alignment=1)
     heading_style = ParagraphStyle('Heading', parent=styles['Heading2'],
-                                   fontSize=14, textColor=colors.darkgreen,
+                                   fontSize=14, textColor=colors.black,
                                    spaceAfter=10, spaceBefore=14)
     body_style = ParagraphStyle('Body', parent=styles['BodyText'],
-                                fontSize=11, leading=16, spaceAfter=8)
+                                fontSize=11, leading=16, spaceAfter=8,
+                                textColor=colors.black)
 
     content = [Paragraph(title, title_style), Spacer(1, 0.15*inch)]
     for section in sections:
@@ -224,6 +225,9 @@ def respond(message, history):
 
         if wants_pdf:
             try:
+                topic = re.sub(r'[^\w\s-]', '', message).strip().replace(' ', '_')[:40] or "report"
+                report_filename = f"/tmp/biomni_report_{topic}.pdf"
+                
                 sections = []
                 lines = cleaned_text.split('\n')
                 current_heading = "Summary"
@@ -251,8 +255,8 @@ def respond(message, history):
                 if not sections:
                     sections = [{"heading": "Response", "content": cleaned_text}]
                 
-                latest_report_path = generate_pdf("Biomni Report", sections)
-                cleaned_text += "\n\n📄 A PDF report has been generated. Click the **Download Latest Report** button below."
+                latest_report_path = generate_pdf("Biomni Report", sections, filename=report_filename)
+                cleaned_text += "\n\n📄 A PDF report has been generated. Click the **Download Report** button below."
             except Exception as e:
                 print("PDF generation failed:", traceback.format_exc())
                 cleaned_text += "\n\n⚠️ PDF generation failed, but the text response is above."
@@ -449,6 +453,11 @@ def main(host: str, port: int):
     footer {
         display: none !important;
     }
+
+    .compact-download {
+        max-width: 160px !important;
+        min-width: 140px !important;
+    }
     """
 
     with gr.Blocks(theme=theme, css=css_content) as iface:
@@ -456,13 +465,19 @@ def main(host: str, port: int):
         gr.Markdown("A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.")
         
         chatbot = gr.Chatbot(label="Biomni", height=500)
-        msg = gr.Textbox(label="Message", placeholder="Ask Biomni anything...")
         
         with gr.Row():
-            download_btn = gr.Button("Download Latest Report", variant="primary")
-            status_text = gr.Textbox(label="Report Status", interactive=False, value="No report generated yet.")
+            msg = gr.Textbox(
+                label="Message",
+                placeholder="Ask Biomni anything...",
+                scale=8,
+                show_label=False
+            )
+            submit_btn = gr.Button("Send", variant="primary", scale=1)
         
-        file_output = gr.File(label="Report PDF", visible=False)
+        with gr.Row():
+            download_btn = gr.Button("Download Report", variant="secondary", elem_classes="compact-download", scale=0)
+            file_output = gr.File(label="Report", visible=False, scale=1)
         
         def chat_handler(message, history):
             for text in respond(message, history):
@@ -474,8 +489,17 @@ def main(host: str, port: int):
         def handle_download():
             path = download_latest_report()
             if path:
-                return gr.update(value=path, visible=True), "Report ready for download."
-            return gr.update(visible=False), "No report available. Ask Biomni to generate a report first."
+                return gr.update(value=path, visible=True)
+            return gr.update(visible=False)
+        
+        submit_btn.click(
+            chat_handler,
+            inputs=[msg, chatbot],
+            outputs=[chatbot],
+        ).then(
+            lambda: "",
+            outputs=msg
+        )
         
         msg.submit(
             chat_handler,
@@ -488,7 +512,7 @@ def main(host: str, port: int):
         
         download_btn.click(
             handle_download,
-            outputs=[file_output, status_text]
+            outputs=[file_output]
         )
 
     iface.queue()
@@ -505,3 +529,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     main(args.host, args.port)
+
