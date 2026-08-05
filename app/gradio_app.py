@@ -31,6 +31,7 @@ AGENT_AVAILABLE = False
 agent_instance = None
 HATZ_API_KEY = None
 latest_report_path = None
+stop_requested = False
 
 try:
     from biomni.agent.a1 import A1
@@ -59,6 +60,12 @@ except Exception as e:
     print(STARTUP_ERROR_MESSAGE)
 
 def clean_response(text):
+    # Strip report preamble patterns
+    text = re.sub(r'(?i)^[\s\S]*?Here is a structured report on [^\n]*?\n+', '', text)
+    text = re.sub(r'(?i)^[\s\S]*?that can be converted into a PDF:?\s*\n+', '', text)
+    text = re.sub(r'(?i)^[\s\S]*?below is a structured report[\s\S]*?\n+', '', text)
+    text = re.sub(r'(?i)^[\s\S]*?I have structured this as a report[\s\S]*?\n+', '', text)
+    
     text = re.sub(r'Each response must include thinking process.*?\n', '', text, flags=re.DOTALL)
     transition_phrases = r'(Now, I will provide.*?|I will now correct this.*?|Here is the (solution|corrected version|response).*?|Below is the.*?)'
     text = re.sub(r'^[\s\S]*?' + transition_phrases + r':?\s*\n+', '', text, flags=re.IGNORECASE)
@@ -140,7 +147,8 @@ def generate_pdf(title, sections, filename=None):
     return output_path
 
 def respond(message, history):
-    global agent_instance, latest_report_path
+    global agent_instance, latest_report_path, stop_requested
+    stop_requested = False
 
     if STARTUP_ERROR_MESSAGE:
         yield f"ERROR:\n\n{STARTUP_ERROR_MESSAGE}"
@@ -196,9 +204,11 @@ def respond(message, history):
         
         wants_pdf = any(keyword in message.lower() for keyword in ["pdf", "report", "save this", "download this", "generate a report"])
         if wants_pdf:
-            full_input += "\n\nAlso, structure your response with clear headings and sections so it can be turned into a PDF report."
+            full_input += "\n\nAlso, structure your response with clear headings and sections so it can be turned into a PDF report. Do not include any preamble about the report being convertible to PDF."
         
         for chunk in agent_instance.go_stream(full_input):
+            if stop_requested:
+                break
             print(f"CHUNK KEYS: {chunk.keys()} | output: {chunk.get('output', '')[:100]}")
             if "output" in chunk and isinstance(chunk["output"], str):
                 current_text = chunk["output"]
@@ -474,45 +484,81 @@ def main(host: str, port: int):
                 show_label=False
             )
             submit_btn = gr.Button("Send", variant="primary", scale=1)
+            stop_btn = gr.Button("Stop", variant="stop", scale=1, visible=False)
         
         with gr.Row():
             download_btn = gr.Button("Download Report", variant="secondary", elem_classes="compact-download", scale=0)
             file_output = gr.File(label="Report", visible=False, scale=1)
+            download_status = gr.Textbox(value="", show_label=False, interactive=False, scale=1)
         
         def chat_handler(message, history):
+            global stop_requested
+            stop_requested = False
             for text in respond(message, history):
                 history = history + [[message, text]]
                 yield history
                 history = history[:-1]
             yield history + [[message, text]]
         
+        def clear_input():
+            return ""
+        
+        def request_stop():
+            global stop_requested
+            stop_requested = True
+            return gr.update(visible=False), gr.update(visible=True)
+        
+        def show_stop():
+            return gr.update(visible=True), gr.update(visible=False)
+        
+        def show_submit():
+            return gr.update(visible=False), gr.update(visible=True)
+        
         def handle_download():
             path = download_latest_report()
             if path:
-                return gr.update(value=path, visible=True)
-            return gr.update(visible=False)
+                return gr.update(value=path, visible=True), ""
+            return gr.update(visible=False), "No report available. Ask Biomni to generate a report first."
         
-        submit_btn.click(
+        # Clear input immediately, then start chat, show stop button
+        submit_event = submit_btn.click(
+            clear_input,
+            outputs=msg
+        ).then(
+            show_stop,
+            outputs=[stop_btn, submit_btn]
+        ).then(
             chat_handler,
             inputs=[msg, chatbot],
             outputs=[chatbot],
         ).then(
-            lambda: "",
-            outputs=msg
+            show_submit,
+            outputs=[stop_btn, submit_btn]
         )
         
         msg.submit(
+            clear_input,
+            outputs=msg
+        ).then(
+            show_stop,
+            outputs=[stop_btn, submit_btn]
+        ).then(
             chat_handler,
             inputs=[msg, chatbot],
             outputs=[chatbot],
         ).then(
-            lambda: "",
-            outputs=msg
+            show_submit,
+            outputs=[stop_btn, submit_btn]
+        )
+        
+        stop_btn.click(
+            request_stop,
+            outputs=[stop_btn, submit_btn]
         )
         
         download_btn.click(
             handle_download,
-            outputs=[file_output]
+            outputs=[file_output, download_status]
         )
 
     iface.queue()
@@ -529,4 +575,3 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     main(args.host, args.port)
-
