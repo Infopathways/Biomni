@@ -29,7 +29,7 @@ print("=== END DIAGNOSTIC ===")
 STARTUP_ERROR_MESSAGE = None
 AGENT_AVAILABLE = False
 agent_instance = None
-HATZ_API_KEY = None
+HATZ_API_KEY = None  # Will be set below
 
 try:
     from biomni.agent.a1 import A1
@@ -58,105 +58,131 @@ except Exception as e:
     print(STARTUP_ERROR_MESSAGE)
 
 def clean_response(text):
-    # (keep your existing clean_response function exactly as is)
+    # 1. Delete the leaked backend instruction.
     text = re.sub(r'Each response must include thinking process.*?\n', '', text, flags=re.DOTALL)
+
+    # 2. Look for common phrases and cut everything BEFORE and INCLUDING them.
     transition_phrases = r'(Now, I will provide.*?|I will now correct this.*?|Here is the (solution|corrected version|response).*?|Below is the.*?)'
     text = re.sub(r'^[\s\S]*?' + transition_phrases + r':?\s*\n+', '', text, flags=re.IGNORECASE)
+
+    # 3. Remove the "Plan:" outlines and standard preambles
     text = re.sub(r'(?im)^Plan:\s*\n(?:[-*]?\s*.*\n)+', '', text)
     text = re.sub(r'^(The user (is asking|asked|requested)|To explain|To answer|My thinking|Thinking Process|Reasoning)[\s\S]*?\n\n', '', text, flags=re.IGNORECASE | re.MULTILINE)
+    
+    # 4. General cleanup of leftover headers or conversational filler at the top
     text = re.sub(r'={5,}.*?={5,}\n?', '', text)
     text = re.sub(r'</?solution>', '', text)
     text = re.sub(r'^(I understand|I will now|I will provide|I see you|I will comply|I need to include|I\'ll follow).*?\n', '', text, flags=re.IGNORECASE | re.MULTILINE)
     text = re.sub(r'^\d+\.\s+Ask.*?\n', '', text, flags=re.MULTILINE)
+    
+    # 5. Remove leaked reasoning about execute/solution tags and XML tags
     text = re.sub(r'(?i)(I realize that I mistakenly used a print statement.*?)(?=\n\n|\Z)', '', text, flags=re.DOTALL)
     text = re.sub(r'(?i)(I should provide the response as text inside the execute tag.*?)(?=\n\n|\Z)', '', text, flags=re.DOTALL)
     text = re.sub(r'(?i)(it\'?s more appropriate to use the .*? tag.*?)(?=\n\n|\Z)', '', text, flags=re.DOTALL)
     text = re.sub(r'</?execute>', '', text, flags=re.IGNORECASE)
     text = re.sub(r'</?solution>', '', text, flags=re.IGNORECASE)
     text = re.sub(r'(?i)^\s*(Since this is a direct response|Instead, I should|I realize that)[\s\S]*?\n\n', '', text)
+    
+    # 6. Catch the "Now, to align with instructions" pattern and everything before it
     text = re.sub(r'(?is)^[\s\S]*?(now,?\s+to\s+align\s+with\s+the?\s+instructions?,?\s+I\s+will\s+fix\s+that\s+response\s+by\s+including\s+the?\s+required\s+tags?\.?\s*\n+)', '', text)
+    
+    # 7. Catch "I greeted" / "I responded" / "you greeted" reasoning preamble
     text = re.sub(r'(?is)^[\s\S]*?(I\s+(greeted|responded|replied)|You\s+(greeted|responded|said)|Currently,?\s+you\s+greeted)[\s\S]*?\n\n', '', text)
+    
+    # 8. Catch "Thank you for pointing that out" / "I will make sure to include my thinking process"
     text = re.sub(r'(?is)^[\s\S]*?(Thank\s+you\s+for\s+pointing\s+that\s+out|I\s+will\s+make\s+sure\s+to\s+include\s+my\s+thinking\s+process|followed\s+by\s+the\s+appropriate\s+tag\s+in\s+every\s+response)[\s\S]*?\n\n', '', text)
+    
+    # 9. Catch any sentence mentioning "thinking process" or "appropriate tag"
     text = re.sub(r'(?i)^.*?(thinking process|appropriate tag|required tag|execute tag|solution tag).*?\n', '', text, flags=re.MULTILINE)
+    
+    # 10. Generic catch-all - find the first line that looks like an actual answer
     answer_match = re.search(r'(?m)^(Hello!|Hi!|Hey!|Greetings!|Sure!|Of course!|Absolutely!|Yes,?|No,?|The |A |An |I\s+can|Let\s+me|Here\s+is|Here\s+are|You\'?re\s+welcome|Thank\s+you)', text)
     if answer_match and answer_match.start() > 0:
         text = text[answer_match.start():]
+    
+    # 11. Remove any remaining XML-style tags
     text = re.sub(r'</?\w+>', '', text, flags=re.IGNORECASE)
+    # 11d. Catch "Here is my clear thinking and reasoning" and everything before the actual answer
     text = re.sub(r'(?i)^[\s\S]*?(here\s+is\s+(my\s+)?(clear\s+)?think(ing|er)|next,?\s+I\s+will\s+(summarize|provide)|now\s+I\s+will\s+provide\s+(the\s+)?(final\s+)?response)[\s\S]*?(within\s+the\s+tag\.?|below\.?|here\s+is.*?)\.?\s*\n+', '', text)
+
+    # 11e. Catch standalone reasoning lines
     text = re.sub(r'(?i)^Here is (my |the )?(clear )?(thinking|reasoning) and reasoning:\s*\n', '', text, flags=re.MULTILINE)
     text = re.sub(r'(?i)^Next, I will (summarize|provide)[\s\S]*?\n', '', text, flags=re.MULTILINE)
     text = re.sub(r'(?i)^Now I will provide (the )?final (complete )?response[\s\S]*?\n', '', text, flags=re.MULTILINE)
+    # 11g. Catch tool/module failure reasoning
     text = re.sub(r'(?i)^The (module|tool|database|literature|API) (error|failure|problem|issue) persists[\s\S]*?(I will rely on|to answer the question|based on)[\s\S]*?\n\n', '', text)
+
+    # 11h. Catch "Given this repeated failure" pattern
     text = re.sub(r'(?i)^Given (this|the) (repeated )?(failure|error)[\s\S]*?(I will rely|based on)[\s\S]*?\n\n', '', text)
+
+    # 11i. Catch "I will rely on my knowledge" preamble
     text = re.sub(r'(?i)^I will (rely on|use) (my )?(biomedical|scientific|domain) knowledge[\s\S]*?(to answer|based on)[\s\S]*?\n\n', '', text)
     text = re.sub(r'(?i)^There appears to be (a )?persistent error related to (the )?missing.*?(package|library|module)[\s\S]*?(I will change|to provide|given this)[\s\S]*?\n\n', '', text)
+
+    # 11r. Catch "I will compose" pattern
     text = re.sub(r'(?i)^I will compose (a )?concise summary[\s\S]*?\n\n', '', text)
+
+    # 11s. Catch "I will change my approach" pattern
     text = re.sub(r'(?i)^I will change my approach[\s\S]*?\n\n', '', text)
+
+    # 11t. Catch "This way, I can deliver" pattern
     text = re.sub(r'(?i)^This way, I can deliver[\s\S]*?\n\n', '', text)
+
+    # 11u. Catch "knowledge-based summary" preamble
     text = re.sub(r'(?i)^.*?knowledge-based summary.*?\n', '', text, flags=re.MULTILINE)
+
+    # 11v. Catch "knowledge cutoff" preamble
     text = re.sub(r'(?i)^.*?knowledge cutoff.*?\n', '', text, flags=re.MULTILINE)
+    # 11w. Catch Python code blocks the agent tries to show the user
     text = re.sub(r'(?is)```python[\s\S]*?```', '', text)
     text = re.sub(r'(?is)^from\s+\w+.*?print\(.*?\)', '', text, flags=re.MULTILINE)
     text = re.sub(r'(?is)^import\s+\w+[\s\S]*?print\(.*?\)', '', text, flags=re.MULTILINE)
+
+    # 11x. Catch "Thank you for the clarification" preamble
     text = re.sub(r'(?i)^Thank you for the clarification[\s\S]*?\n\n', '', text)
+
+    # 11y. Catch "Here is the plan again" pattern
     text = re.sub(r'(?i)^Here is the plan again:[\s\S]*?\n\n', '', text)
+
+    # 11z. Catch "Please confirm the scope" pattern
     text = re.sub(r'(?i)^Please confirm the scope[\s\S]*?\n\n', '', text)
+
+    # 11aa. Catch "I need to clarify the user's intent" pattern
     text = re.sub(r'(?i)^I need to clarify the user.s intent[\s\S]*?\n\n', '', text)
+
+    # 11bb. Catch "To assist you effectively" pattern
     text = re.sub(r'(?i)^To assist you effectively[\s\S]*?\n\n', '', text)
+
+    # 11cc. Catch "Since direct database queries are encountering module errors"
     text = re.sub(r'(?i)^Since direct database queries are encountering module errors[\s\S]*?\n\n', '', text)
+
+    # 11dd. Catch "I will finalize with a concise explanation"
     text = re.sub(r'(?i)^I will finalize with[\s\S]*?\n\n', '', text)
+    
+    # 12. Clean up extra blank lines
     text = re.sub(r'\n{3,}', '\n\n', text)
+    
     return text.strip()
-
-def generate_pdf(title, sections):
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import letter
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import inch
-
-    output_path = "/tmp/biomni_report.pdf"
-    doc = SimpleDocTemplate(output_path, pagesize=letter,
-                            rightMargin=0.6*inch, leftMargin=0.6*inch,
-                            topMargin=0.8*inch, bottomMargin=0.6*inch)
-
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('Title', parent=styles['Heading1'],
-                                  fontSize=20, textColor=colors.darkblue,
-                                  spaceAfter=16, alignment=1)
-    heading_style = ParagraphStyle('Heading', parent=styles['Heading2'],
-                                   fontSize=14, textColor=colors.darkgreen,
-                                   spaceAfter=10, spaceBefore=14)
-    body_style = ParagraphStyle('Body', parent=styles['BodyText'],
-                                fontSize=11, leading=16, spaceAfter=8)
-
-    content = [Paragraph(title, title_style), Spacer(1, 0.15*inch)]
-    for section in sections:
-        content.append(Paragraph(section["heading"], heading_style))
-        content.append(Paragraph(section["content"], body_style))
-
-    doc.build(content)
-    return output_path
 
 def respond(message, history):
     global agent_instance
 
     if STARTUP_ERROR_MESSAGE:
-        yield f"ERROR:\n\n{STARTUP_ERROR_MESSAGE}", None
+        yield f"ERROR:\n\n{STARTUP_ERROR_MESSAGE}"
         return
 
     if not AGENT_AVAILABLE:
-        yield "ERROR: The Biomni agent is not available for an unknown reason.", None
+        yield "ERROR: The Biomni agent is not available for an unknown reason."
         return
 
     if not message:
-        yield "(empty)", None
+        yield "(empty)"
         return
 
     # Lazy initialization of the agent
     if agent_instance is None:
         try:
-            yield "Initializing the Biomni agent and downloading the data lake... This may take a few minutes.", None
+            yield "Initializing the Biomni agent and downloading the data lake... This may take a few minutes."
             agent_instance = A1(
                 llm='gpt-4.1-mini',
                 api_key=HATZ_API_KEY,
@@ -165,9 +191,9 @@ def respond(message, history):
                 use_tool_retriever=True,
                 path="/app/data"
             )
-            yield "Agent initialized! Processing your request...", None
+            yield "Agent initialized! Processing your request..."
         except Exception as e:
-            yield f"Failed to initialize the Biomni agent:\n\n{traceback.format_exc()}", None
+            yield f"Failed to initialize the Biomni agent:\n\n{traceback.format_exc()}"
             return
 
     try:
@@ -181,6 +207,7 @@ def respond(message, history):
         ]
         step_idx = 0
         
+        # Build context from previous conversation turns
         context = ""
         if history and len(history) > 0:
             recent = history[-20:] if len(history) > 20 else history
@@ -200,7 +227,8 @@ def respond(message, history):
                 current_text = chunk["output"]
                 final_response = current_text
                 all_chunks.append(current_text)
-                yield loading_frames[step_idx % 3], None
+                
+                yield loading_frames[step_idx % 3]
                 step_idx += 1
         
         for c in reversed(all_chunks):
@@ -210,6 +238,7 @@ def respond(message, history):
 
         cleaned_text = clean_response(final_response)
         
+        # Fallback if response is empty or unhelpful
         if not cleaned_text.strip():
             cleaned_text = "I wasn't able to generate a response. Could you rephrase or provide more details?"
         elif cleaned_text.lower() in [
@@ -219,49 +248,12 @@ def respond(message, history):
         ]:
             cleaned_text = "I wasn't able to process that. Could you rephrase or provide more context?"
 
-        # PDF generation trigger
-        pdf_path = None
-        if any(keyword in message.lower() for keyword in ["pdf", "report", "save this", "download this", "generate a report"]):
-            try:
-                sections = []
-                lines = cleaned_text.split('\n')
-                current_heading = "Summary"
-                current_content = []
-                
-                for line in lines:
-                    line = line.strip()
-                    if line.startswith('#') or line.startswith('**') or (len(line) > 0 and line[-1] not in '.:,' and len(line) < 60):
-                        if current_content:
-                            sections.append({
-                                "heading": current_heading,
-                                "content": ' '.join(current_content).strip()
-                            })
-                        current_heading = line.strip('#*').strip()
-                        current_content = []
-                    else:
-                        current_content.append(line)
-                
-                if current_content:
-                    sections.append({
-                        "heading": current_heading,
-                        "content": ' '.join(current_content).strip()
-                    })
-                
-                if not sections:
-                    sections = [{"heading": "Response", "content": cleaned_text}]
-                
-                pdf_path = generate_pdf("Biomni Report", sections)
-                cleaned_text += "\n\n📄 A PDF report has been generated and is available for download."
-            except Exception as e:
-                print("PDF generation failed:", traceback.format_exc())
-                cleaned_text += "\n\n⚠️ PDF generation failed, but the text response is above."
-
-        yield cleaned_text, pdf_path
+        yield cleaned_text
 
     except Exception as e:
         print("\nERROR DURING AGENT REQUEST")
         traceback.print_exc()
-        yield f"An error occurred within the agent:\n\n{traceback.format_exc()}", None
+        yield f"An error occurred within the agent:\n\n{traceback.format_exc()}"
 
 def main(host: str, port: int):
     theme = gr.themes.Default(
@@ -271,6 +263,7 @@ def main(host: str, port: int):
         button_primary_background_fill="#ff8800",
         button_primary_background_fill_hover="#3662d4",
         button_primary_text_color="white",
+        # Force title color in the theme itself
         block_title_text_color="#ff8800",
         block_label_text_color="#ff8800",
     )
@@ -445,38 +438,14 @@ def main(host: str, port: int):
     }
     """
 
-    with gr.Blocks(theme=theme, css=css_content) as iface:
-        gr.Markdown("# Biomni AI Agent")
-        gr.Markdown("A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.")
-        
-        chatbot = gr.Chatbot(label="Biomni")
-        msg = gr.Textbox(label="Message", placeholder="Ask Biomni anything...")
-        file_output = gr.File(label="Download Report", visible=False)
-        
-        def chat_and_file(message, history):
-            final_text = ""
-            final_file = None
-            
-            for text, file_path in respond(message, history):
-                final_text = text
-                if file_path:
-                    final_file = file_path
-            
-            history = history + [[message, final_text]]
-            
-            if final_file:
-                return history, gr.update(value=final_file, visible=True)
-            return history, gr.update(visible=False)
-        
-        msg.submit(
-            chat_and_file,
-            inputs=[msg, chatbot],
-            outputs=[chatbot, file_output],
-        ).then(
-            lambda: "",
-            outputs=msg
-        )
-
+    iface = gr.ChatInterface(
+        fn=respond,
+        title="Biomni AI Agent",
+        description="A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.",
+        theme=theme,
+        css=css_content,
+        examples=None, retry_btn=None, undo_btn=None, clear_btn=None
+    )
     iface.queue()
     print(f"Launching Gradio UI on {host}:{port}")
     iface.launch(server_name=host, server_port=port, share=False)
