@@ -33,6 +33,12 @@ HATZ_API_KEY = None
 latest_report_path = None
 stop_requested = False
 
+def request_stop():
+    global stop_requested
+    stop_requested = True
+    return gr.update(visible=True), gr.update(visible=False)
+stop_requested = False
+
 try:
     from biomni.agent.a1 import A1
     import openai
@@ -475,6 +481,7 @@ def main(host: str, port: int):
         gr.Markdown("A specialized AI agent for biology and genetics research. Ask me about genes, diseases, and proteins.")
         
         chatbot = gr.Chatbot(label="Biomni", height=500)
+        pending_message = gr.State("")
         
         with gr.Row():
             msg = gr.Textbox(
@@ -489,89 +496,67 @@ def main(host: str, port: int):
         with gr.Row():
             download_btn = gr.Button("Download Report", variant="secondary", elem_classes="compact-download", scale=0)
             file_output = gr.File(label="Report", visible=False, scale=1)
-            download_status = gr.Textbox(value="", show_label=False, interactive=False, scale=1)
         
-        def chat_handler(message, history):
-            global stop_requested
-            stop_requested = False
-            for text in respond(message, history):
-                history = history + [[message, text]]
+        def capture_message(message):
+            return message, ""
+        
+        def chat_handler_stored(stored_message, history):
+            for text in respond(stored_message, history):
+                history = history + [[stored_message, text]]
                 yield history
                 history = history[:-1]
-            yield history + [[message, text]]
-        
-        def clear_input():
-            return ""
-        
-        def request_stop():
-            global stop_requested
-            stop_requested = True
-            return gr.update(visible=False), gr.update(visible=True)
+            yield history + [[stored_message, text]]
         
         def show_stop():
-            return gr.update(visible=True), gr.update(visible=False)
+            return gr.update(visible=False), gr.update(visible=True)
         
         def show_submit():
-            return gr.update(visible=False), gr.update(visible=True)
+            return gr.update(visible=True), gr.update(visible=False)
         
         def handle_download():
             path = download_latest_report()
             if path:
-                return gr.update(value=path, visible=True), ""
-            return gr.update(visible=False), "No report available. Ask Biomni to generate a report first."
+                return gr.update(value=path, visible=True)
+            return gr.update(visible=False)
         
-        # Clear input immediately, then start chat, show stop button
+        # Capture message into state and clear input, then run chat handler
         submit_event = submit_btn.click(
-            clear_input,
-            outputs=msg
+            capture_message,
+            inputs=[msg],
+            outputs=[pending_message, msg],
         ).then(
             show_stop,
-            outputs=[stop_btn, submit_btn]
+            outputs=[submit_btn, stop_btn]
         ).then(
-            chat_handler,
-            inputs=[msg, chatbot],
+            chat_handler_stored,
+            inputs=[pending_message, chatbot],
             outputs=[chatbot],
         ).then(
             show_submit,
-            outputs=[stop_btn, submit_btn]
+            outputs=[submit_btn, stop_btn]
         )
         
         msg.submit(
-            clear_input,
-            outputs=msg
+            capture_message,
+            inputs=[msg],
+            outputs=[pending_message, msg],
         ).then(
             show_stop,
-            outputs=[stop_btn, submit_btn]
+            outputs=[submit_btn, stop_btn]
         ).then(
-            chat_handler,
-            inputs=[msg, chatbot],
+            chat_handler_stored,
+            inputs=[pending_message, chatbot],
             outputs=[chatbot],
         ).then(
             show_submit,
-            outputs=[stop_btn, submit_btn]
-        )
-        
-        stop_btn.click(
-            request_stop,
-            outputs=[stop_btn, submit_btn]
+            outputs=[submit_btn, stop_btn]
         )
         
         download_btn.click(
             handle_download,
-            outputs=[file_output, download_status]
+            outputs=[file_output]
         )
 
     iface.queue()
     print(f"Launching Gradio UI on {host}:{port}")
     iface.launch(server_name=host, server_port=port, share=False)
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=int(os.environ.get("PORT") or os.environ.get("WEBSITES_PORT") or 7860),
-    )
-    args = parser.parse_args()
-    main(args.host, args.port)
