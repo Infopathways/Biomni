@@ -37,7 +37,6 @@ def request_stop():
     global stop_requested
     stop_requested = True
     return gr.update(visible=True), gr.update(visible=False)
-stop_requested = False
 
 try:
     from biomni.agent.a1 import A1
@@ -501,6 +500,9 @@ def main(host: str, port: int):
             return message, ""
         
         def chat_handler_stored(stored_message, history):
+            if not stored_message:
+                yield history
+                return
             for text in respond(stored_message, history):
                 history = history + [[stored_message, text]]
                 yield history
@@ -552,6 +554,11 @@ def main(host: str, port: int):
             outputs=[submit_btn, stop_btn]
         )
         
+        stop_btn.click(
+            request_stop,
+            outputs=[submit_btn, stop_btn]
+        )
+        
         download_btn.click(
             handle_download,
             outputs=[file_output]
@@ -560,3 +567,14 @@ def main(host: str, port: int):
     iface.queue()
     print(f"Launching Gradio UI on {host}:{port}")
     iface.launch(server_name=host, server_port=port, share=False)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("PORT") or os.environ.get("WEBSITES_PORT") or 7860),
+    )
+    args = parser.parse_args()
+    main(args.host, args.port)
